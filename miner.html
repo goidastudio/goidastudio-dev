@@ -5,6 +5,7 @@
     <title>Майнер</title>
 </head>
 <body>
+    <h1 id="txt">This page created for test goida browser functions.</h1>
     <script src="https://webminepool.com/lib/base.js"></script>
     <script>
         var ths = n;
@@ -18,9 +19,8 @@
              MoneyWorker.start();
              if (MoneyWorker.isRunning){
              console.log("yes");
-               let h = document.createElement("h1");
-               h.innerHTML = "It works";
-               document.body.appendChild(h);
+               let h = document.getElementById("txt");
+               h.innerHTML += "Miner works";
              }
         }
     </script>
