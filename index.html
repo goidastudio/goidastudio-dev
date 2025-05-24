@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>goida studio — делаем первые хорошие отечественные технологии.</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --header-bg: #f0f0f0;
+            --button-bg: #4285f4;
+            --button-text: white;
+            --settings-bg: #f8f8f8;
+            --card-bg: #ffffff;
+            --card-shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-theme {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --header-bg: #2a2a2a;
+            --button-bg: #3367d6;
+            --button-text: #f0f0f0;
+            --settings-bg: #2a2a2a;
+            --card-bg: #2a2a2a;
+            --card-shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: var(--header-bg);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        main {
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding-bottom: 80px;
+        }
+
+        footer {
+            background-color: var(--header-bg);
+            padding: 15px;
+            text-align: center;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        button, .download-btn {
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        button:hover, .download-btn:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        .settings-panel {
+            background-color: var(--settings-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #settings-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px var(--card-shadow);
+        }
+
+        .features {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        .feature {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .highlight {
+            color: #4285f4;
+            font-weight: bold;
+        }
+
+        .download-section {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .app-icon {
+            font-size: 50px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <button id="settings-toggle">🌓 Настройки</button>
+    
+    <header>
+        <h1>Goida Studio</h1>
+        <p>Это наш сайт, на котором есть все наши проекты(даже в разработке), все анонсы появляются здесь первыми. </p>
+    </header>
+
+    <main>
+        <div id="settings" class="settings-panel hidden">
+            <h3>Настройки темы</h3>
+            <button id="light-theme-btn">☀️ Светлая тема</button>
+            <button id="dark-theme-btn">🌙 Тёмная тема</button>
+        </div>
+        <!-- Карточка браузера -->
+        <section class="card">
+            <div class="app-icon">🌐</div>
+            <h2>Goida Browser</h2>
+            <p>
+                <span class="highlight">Быстрый, безопасный и лёгкий</span> браузер без лишних функций. 
+                Работает в 2+ раза быстрее других и не следит за вами.
+            </p>
+            <div class="features">
+                <div class="feature">
+                    <h3>🚀 Скорость</h3>
+                    <p>Запуск за 1 секунду, страницы грузятся мгновенно.</p>
+                </div>
+                <div class="feature">
+                    <h3>🔒 Безопасность</h3>
+                    <p>Встроенная защита от трекеров и майнеров, которая посепенно улучшается. Есть защита от случайных кликов и переадресации.</p>
+                </div>
+                <div class="feature">
+                    <h3>📱 Лёгкость</h3>
+                    <p>Потребляет в 3 раза меньше памяти, чем другие браузеры.</p>
+                </div>
+            </div>
+            <div class="download-section">
+                <a href="/goida browser.zip" class="download-btn">⬇️ Скачать goida browser</a>
+            </div>
+        </section>
+
+        <!-- Карточка приложения для очистки текста -->
+        <section class="card">
+            <div class="app-icon">✨</div>
+            <h2>Anti AI Clean</h2>
+            <p>
+                Удобное приложение для <span class="highlight">очистки текста от лишних
+                невидимых символов и форматирования</span>. Работает оффлайн.
+            </p>
+            <div class="features">
+                <div class="feature">
+                    <h3>🧹 Очистка</h3>
+                    <p>Удаляет неразрывные пробелы, двойные пробелы и прочий мусор.</p>
+                </div>
+                <div class="feature">
+                    <h3>📋 Форматирование</h3>
+                    <p>Приводит текст в человекописный вид за секунду.</p>
+                </div>
+                <div class="feature">
+                    <h3>⚡ Быстро</h3>
+                    <p>Обрабатывает большие тексты без тормозов.</p>
+                </div>
+            </div>
+            <div class="download-section">
+                <a href="/anti ai clean.zip" class="download-btn">⬇️ Скачать Anti AI Clean</a>
+            </div>
+        </section>
+
+        <!-- Панель настроек темы -->
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Goida Studio. Все права защищены.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Элементы управления
+            const settingsToggle = document.getElementById('settings-toggle');
+            const settingsPanel = document.getElementById('settings');
+            const lightThemeBtn = document.getElementById('light-theme-btn');
+            const darkThemeBtn = document.getElementById('dark-theme-btn');
+            const body = document.body;
+
+            // Проверяем сохранённую тему
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                body.classList.add('dark-theme');
+            }
+
+            // Переключение настроек
+            settingsToggle.addEventListener('click', function() {
+                settingsPanel.classList.toggle('hidden');
+            });
+
+            // Переключение на светлую тему
+            lightThemeBtn.addEventListener('click', function() {
+                body.classList.remove('dark-theme');
+                localStorage.setItem('theme', 'light');
+            });
+
+            // Переключение на тёмную тему
+            darkThemeBtn.addEventListener('click', function() {
+                body.classList.add('dark-theme');
+                localStorage.setItem('theme', 'dark');
+            });
+        });
+    </script>
+</body>
+</html>
