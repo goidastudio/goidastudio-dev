@@ -164,185 +164,187 @@
     </div>
 
     <script>
-        // Элементы DOM
-        const themeToggle = document.getElementById('themeToggle');
-        const hashTestBtn = document.getElementById('runHashTest');
-        const mathTestBtn = document.getElementById('runMathTest');
-        const memoryTestBtn = document.getElementById('runMemoryTest');
-        const gpuTestBtn = document.getElementById('runGPUTest');
-        const fullTestBtn = document.getElementById('runFullTest');
-        const progressBar = document.getElementById('progressBar');
-        const testStatus = document.getElementById('testStatus');
-        const resultsContainer = document.getElementById('resultsContainer');
-        const hashResultEl = document.getElementById('hashResult');
-        const mathResultEl = document.getElementById('mathResult');
-        const memoryResultEl = document.getElementById('memoryResult');
-        const gpuResultEl = document.getElementById('gpuResult');
-        const totalScoreEl = document.getElementById('totalScore');
-        const scorePointer = document.getElementById('scorePointer');
-        const recommendationEl = document.getElementById('recommendation');
-        const ctx = document.getElementById('benchmarkChart').getContext('2d');
+    // Элементы DOM
+    const themeToggle = document.getElementById('themeToggle');
+    const hashTestBtn = document.getElementById('runHashTest');
+    const mathTestBtn = document.getElementById('runMathTest');
+    const memoryTestBtn = document.getElementById('runMemoryTest');
+    const gpuTestBtn = document.getElementById('runGPUTest');
+    const fullTestBtn = document.getElementById('runFullTest');
+    const progressBar = document.getElementById('progressBar');
+    const testStatus = document.getElementById('testStatus');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const hashResultEl = document.getElementById('hashResult');
+    const mathResultEl = document.getElementById('mathResult');
+    const memoryResultEl = document.getElementById('memoryResult');
+    const gpuResultEl = document.getElementById('gpuResult');
+    const totalScoreEl = document.getElementById('totalScore');
+    const scorePointer = document.getElementById('scorePointer');
+    const recommendationEl = document.getElementById('recommendation');
+    const ctx = document.getElementById('benchmarkChart').getContext('2d');
 
-        // Глобальные переменные
-        let currentChart = null;
-        let benchmarkResults = {
-            hash: { score: 0, time: 0 },
-            math: { score: 0, time: 0 },
-            memory: { score: 0, time: 0 },
-            gpu: { score: 0, fps: 0, supported: checkWebGLSupport() },
-            total: 0
+    // Глобальные переменные
+    let currentChart = null;
+    let benchmarkResults = {
+        hash: { score: 0, time: 0 },
+        math: { score: 0, time: 0 },
+        memory: { score: 0, time: 0 },
+        gpu: { score: 0, fps: 0, supported: checkWebGLSupport() },
+        total: 0
+    };
+
+    // Равные веса для всех тестов (по 25%)
+    const testWeights = {
+        hash: 0.25,
+        math: 0.25,
+        memory: 0.25,
+        gpu: 0.25
+    };
+
+    // Максимальные значения для 100 баллов
+    const maxScores = {
+        hash: 15000,  // Хешей/сек
+        math: 5000,   // тыс. операций/сек
+        memory: 2000, // тыс. элементов/сек
+        gpu: 60       // FPS
+    };
+
+    // Проверка поддержки WebGL
+    function checkWebGLSupport() {
+        try {
+            const canvas = document.createElement('canvas');
+            return !!window.WebGLRenderingContext && 
+                  (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Инициализация
+    function init() {
+        if (!benchmarkResults.gpu.supported) {
+            gpuTestBtn.disabled = true;
+            gpuTestBtn.title = "Ваш браузер/устройство не поддерживает WebGL";
+            gpuTestBtn.classList.add('gpu-unsupported');
+        }
+    }
+
+    // Тёмная тема
+    themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        themeToggle.textContent = document.body.classList.contains('dark-mode') 
+            ? '☀ Светлая тема' 
+            : '🌙 Тёмная тема';
+    });
+
+    // Тест хеширования (SHA-256)
+    async function runHashTest() {
+        const startTime = performance.now();
+        hashResultEl.innerHTML = "Выполняется...";
+        
+        let hashResult = '';
+        const iterations = 30000;
+        
+        for (let i = 0; i < iterations; i++) {
+            hashResult = CryptoJS.SHA256(i.toString()).toString();
+            if (i % 5000 === 0) await delay(1);
+        }
+
+        const endTime = performance.now();
+        const duration = (endTime - startTime) / 1000;
+        const score = Math.min(Math.round(iterations / duration), maxScores.hash);
+        
+        benchmarkResults.hash = {
+            score: score,
+            time: duration
         };
+        
+        hashResultEl.innerHTML = `
+            <h3>Тест хеширования</h3>
+            <p>Время: <strong>${duration.toFixed(2)} сек</strong></p>
+            <p>Производительность: <strong>${score} хешей/сек</strong></p>
+            <p>Оценка: <strong>${Math.round(score / maxScores.hash * 100)}/100</strong></p>
+        `;
+        
+        return score;
+    }
 
-        // Равные веса для всех тестов (по 25%)
-        const testWeights = {
-            hash: 0.25,
-            math: 0.25,
-            memory: 0.25,
-            gpu: 0.25
+    // Тест математических вычислений
+    async function runMathTest() {
+        const startTime = performance.now();
+        mathResultEl.innerHTML = "Выполняется...";
+        
+        let sum = 0;
+        const iterations = 5000000;
+        
+        for (let i = 0; i < iterations; i++) {
+            sum += Math.sqrt(i) * Math.sin(i);
+            if (i % 100000 === 0) await delay(1);
+        }
+
+        const endTime = performance.now();
+        const duration = (endTime - startTime) / 1000;
+        const score = Math.min(Math.round(iterations / duration / 1000), maxScores.math);
+        
+        benchmarkResults.math = {
+            score: score,
+            time: duration
         };
+        
+        mathResultEl.innerHTML = `
+            <h3>Тест математики</h3>
+            <p>Время: <strong>${duration.toFixed(2)} сек</strong></p>
+            <p>Производительность: <strong>${score} тыс. операций/сек</strong></p>
+            <p>Оценка: <strong>${Math.round(score / maxScores.math * 100)}/100</strong></p>
+        `;
+        
+        return score;
+    }
 
-        // Максимальные значения для 100 баллов
-        const maxScores = {
-            hash: 15000,  // Хешей/сек
-            math: 5000,   // тыс. операций/сек
-            memory: 2000, // тыс. элементов/сек
-            gpu: 60       // FPS
+    // Тест памяти
+    async function runMemoryTest() {
+        const startTime = performance.now();
+        memoryResultEl.innerHTML = "Выполняется...";
+        
+        const arraySize = 3000000;
+        const hugeArray = new Array(arraySize);
+        
+        for (let i = 0; i < arraySize; i++) {
+            hugeArray[i] = Math.random();
+            if (i % 100000 === 0) await delay(1);
+        }
+
+        hugeArray.sort((a, b) => a - b);
+
+        const endTime = performance.now();
+        const duration = (endTime - startTime) / 1000;
+        const score = Math.min(Math.round(arraySize / duration / 1000), maxScores.memory);
+        
+        benchmarkResults.memory = {
+            score: score,
+            time: duration
         };
+        
+        memoryResultEl.innerHTML = `
+            <h3>Тест памяти</h3>
+            <p>Время: <strong>${duration.toFixed(2)} сек</strong></p>
+            <p>Производительность: <strong>${score} тыс. элементов/сек</strong></p>
+            <p>Оценка: <strong>${Math.round(score / maxScores.memory * 100)}/100</strong></p>
+        `;
+        
+        return score;
+    }
 
-        // Проверка поддержки WebGL
-        function checkWebGLSupport() {
-            try {
-                const canvas = document.createElement('canvas');
-                return !!window.WebGLRenderingContext && 
-                      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
-            } catch (e) {
-                return false;
-            }
-        }
-
-        // Инициализация
-        function init() {
-            if (!benchmarkResults.gpu.supported) {
-                gpuTestBtn.disabled = true;
-                gpuTestBtn.title = "Ваш браузер/устройство не поддерживает WebGL";
-                gpuTestBtn.classList.add('gpu-unsupported');
-            }
-        }
-
-        // Тёмная тема
-        themeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
-            themeToggle.textContent = document.body.classList.contains('dark-mode') 
-                ? '☀ Светлая тема' 
-                : '🌙 Тёмная тема';
-        });
-
-        // Тест хеширования (SHA-256)
-        async function runHashTest() {
-            const startTime = performance.now();
-            hashResultEl.innerHTML = "Выполняется...";
-            
-            let hashResult = '';
-            const iterations = 30000;
-            
-            for (let i = 0; i < iterations; i++) {
-                hashResult = CryptoJS.SHA256(i.toString()).toString();
-                if (i % 5000 === 0) await delay(1);
-            }
-
-            const endTime = performance.now();
-            const duration = (endTime - startTime) / 1000;
-            const score = Math.min(Math.round(iterations / duration), maxScores.hash);
-            
-            benchmarkResults.hash = {
-                score: score,
-                time: duration
-            };
-            
-            hashResultEl.innerHTML = `
-                <h3>Тест хеширования</h3>
-                <p>Время: <strong>${duration.toFixed(2)} сек</strong></p>
-                <p>Производительность: <strong>${score} хешей/сек</strong></p>
-                <p>Оценка: <strong>${Math.round(score / maxScores.hash * 100)}/100</strong></p>
-            `;
-            
-            return score;
-        }
-
-        // Тест математических вычислений
-        async function runMathTest() {
-            const startTime = performance.now();
-            mathResultEl.innerHTML = "Выполняется...";
-            
-            let sum = 0;
-            const iterations = 5000000;
-            
-            for (let i = 0; i < iterations; i++) {
-                sum += Math.sqrt(i) * Math.sin(i);
-                if (i % 100000 === 0) await delay(1);
-            }
-
-            const endTime = performance.now();
-            const duration = (endTime - startTime) / 1000;
-            const score = Math.min(Math.round(iterations / duration / 1000), maxScores.math);
-            
-            benchmarkResults.math = {
-                score: score,
-                time: duration
-            };
-            
-            mathResultEl.innerHTML = `
-                <h3>Тест математики</h3>
-                <p>Время: <strong>${duration.toFixed(2)} сек</strong></p>
-                <p>Производительность: <strong>${score} тыс. операций/сек</strong></p>
-                <p>Оценка: <strong>${Math.round(score / maxScores.math * 100)}/100</strong></p>
-            `;
-            
-            return score;
-        }
-
-        // Тест памяти
-        async function runMemoryTest() {
-            const startTime = performance.now();
-            memoryResultEl.innerHTML = "Выполняется...";
-            
-            const arraySize = 3000000;
-            const hugeArray = new Array(arraySize);
-            
-            for (let i = 0; i < arraySize; i++) {
-                hugeArray[i] = Math.random();
-                if (i % 100000 === 0) await delay(1);
-            }
-
-            hugeArray.sort((a, b) => a - b);
-
-            const endTime = performance.now();
-            const duration = (endTime - startTime) / 1000;
-            const score = Math.min(Math.round(arraySize / duration / 1000), maxScores.memory);
-            
-            benchmarkResults.memory = {
-                score: score,
-                time: duration
-            };
-            
-            memoryResultEl.innerHTML = `
-                <h3>Тест памяти</h3>
-                <p>Время: <strong>${duration.toFixed(2)} сек</strong></p>
-                <p>Производительность: <strong>${score} тыс. элементов/сек</strong></p>
-                <p>Оценка: <strong>${Math.round(score / maxScores.memory * 100)}/100</strong></p>
-            `;
-            
-            return score;
-        }
-
-        // Тест GPU (WebGL)
-        async function runGPUTest() {
+    // Тест GPU (WebGL) с возвратом Promise
+    function runGPUTest() {
+        return new Promise((resolve) => {
             if (!benchmarkResults.gpu.supported) {
                 gpuResultEl.innerHTML = `
                     <h3>Тест GPU</h3>
                     <p class="error-message">Ваш браузер или устройство не поддерживает WebGL</p>
                 `;
-                return 0;
+                resolve(0);
+                return;
             }
 
             const startTime = performance.now();
@@ -363,7 +365,8 @@
                     <h3>Тест GPU</h3>
                     <p class="error-message">Не удалось инициализировать WebGL</p>
                 `;
-                return 0;
+                resolve(0);
+                return;
             }
 
             // Создаем шейдеры
@@ -412,7 +415,6 @@
 
             // Измерение FPS
             let frameCount = 0;
-            let fps = 0;
             const testDuration = 2000; // 2 секунды теста
 
             function render(time) {
@@ -423,19 +425,22 @@
                 if (performance.now() - startTime < testDuration) {
                     requestAnimationFrame(render);
                 } else {
-                    fps = Math.round(frameCount / (testDuration / 1000));
+                    const fps = Math.round(frameCount / (testDuration / 1000));
+                    document.body.removeChild(canvas);
+                    
                     benchmarkResults.gpu = {
                         score: Math.min(fps, maxScores.gpu),
                         fps: fps,
                         supported: true
                     };
-                    document.body.removeChild(canvas);
                     
                     gpuResultEl.innerHTML = `
                         <h3>Тест GPU</h3>
                         <p>Производительность: <strong>${fps} FPS</strong></p>
                         <p>Оценка: <strong>${Math.round(fps / maxScores.gpu * 100)}/100</strong></p>
                     `;
+                    
+                    resolve(fps);
                 }
             }
 
@@ -446,75 +451,83 @@
             `;
 
             requestAnimationFrame(render);
-            return fps;
-        }
+        });
+    }
 
-        // Очистка предыдущего графика
-        function destroyChart() {
-            if (currentChart) {
-                currentChart.destroy();
-                currentChart = null;
-            }
+    // Очистка предыдущего графика
+    function destroyChart() {
+        if (currentChart) {
+            currentChart.destroy();
+            currentChart = null;
         }
+    }
 
-        // Отрисовка нового графика
-        function renderChart() {
-            destroyChart();
-            
-            const ctx = document.getElementById('benchmarkChart').getContext('2d');
-            currentChart = new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: benchmarkResults.gpu.supported 
-                        ? ['Хеширование', 'Математика', 'Память', 'GPU'] 
-                        : ['Хеширование', 'Математика', 'Память'],
-                    datasets: [{
-                        label: 'Производительность (%)',
-                        data: benchmarkResults.gpu.supported
-                            ? [
-                                benchmarkResults.hash.score / maxScores.hash * 100,
-                                benchmarkResults.math.score / maxScores.math * 100,
-                                benchmarkResults.memory.score / maxScores.memory * 100,
-                                benchmarkResults.gpu.score / maxScores.gpu * 100
-                              ]
-                            : [
-                                benchmarkResults.hash.score / maxScores.hash * 100,
-                                benchmarkResults.math.score / maxScores.math * 100,
-                                benchmarkResults.memory.score / maxScores.memory * 100
-                              ],
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: 'rgba(75, 192, 192, 1)'
-                    }]
-                },
-                options: {
-                    scales: {
-                        r: {
-                            angleLines: {
-                                display: true
-                            },
-                            suggestedMin: 0,
-                            suggestedMax: 100,
-                            ticks: {
-                                stepSize: 20
-                            }
+    // Отрисовка нового графика
+    function renderChart() {
+        destroyChart();
+        
+        currentChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: benchmarkResults.gpu.supported 
+                    ? ['Хеширование', 'Математика', 'Память', 'GPU'] 
+                    : ['Хеширование', 'Математика', 'Память'],
+                datasets: [{
+                    label: 'Производительность (%)',
+                    data: benchmarkResults.gpu.supported
+                        ? [
+                            benchmarkResults.hash.score / maxScores.hash * 100,
+                            benchmarkResults.math.score / maxScores.math * 100,
+                            benchmarkResults.memory.score / maxScores.memory * 100,
+                            benchmarkResults.gpu.score / maxScores.gpu * 100
+                          ]
+                        : [
+                            benchmarkResults.hash.score / maxScores.hash * 100,
+                            benchmarkResults.math.score / maxScores.math * 100,
+                            benchmarkResults.memory.score / maxScores.memory * 100
+                          ],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(75, 192, 192, 1)'
+                }]
+            },
+            options: {
+                scales: {
+                    r: {
+                        angleLines: {
+                            display: true
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 100,
+                        ticks: {
+                            stepSize: 20
                         }
                     }
                 }
-            });
-        }
+            }
+        });
+    }
 
-        // Полный тест с оценкой 0-100
-        async function runFullTest() {
-            // Сброс предыдущих результатов
-            progressBar.style.width = '0%';
-            testStatus.textContent = "Подготовка...";
-            resultsContainer.style.display = 'none';
-            destroyChart();
-            
+    // Вспомогательная функция для запуска теста с прогрессом
+    async function runTestWithProgress(testFunc, progressStart, progressEnd) {
+        const result = await testFunc();
+        const progress = progressStart + (progressEnd - progressStart) * 0.9;
+        progressBar.style.width = `${progress}%`;
+        return result;
+    }
+
+    // Полный тест с оценкой 0-100
+    async function runFullTest() {
+        // Сброс предыдущих результатов
+        progressBar.style.width = '0%';
+        testStatus.textContent = "Подготовка...";
+        resultsContainer.style.display = 'none';
+        destroyChart();
+        
+        try {
             // Запуск тестов последовательно
             testStatus.textContent = "Выполняется тест хеширования (25% оценки)...";
             const hashScore = await runTestWithProgress(runHashTest, 0, 25);
@@ -529,7 +542,7 @@
             let gpuScore = 0;
             if (benchmarkResults.gpu.supported) {
                 testStatus.textContent = "Выполняется тест GPU (25% оценки)...";
-                gpuScore = await runTestWithProgress(runGPUTest, 75, 100);
+                gpuScore = await runTestWithProgress(() => runGPUTest(), 75, 100);
             } else {
                 progressBar.style.width = '100%';
                 gpuResultEl.innerHTML = `
@@ -537,13 +550,6 @@
                     <p class="error-message">WebGL не поддерживается</p>
                     <p>Оценка GPU не учитывается</p>
                 `;
-                // Перераспределяем вес GPU между другими тестами
-                const adjustedScore = Math.round(
-                    (hashScore / maxScores.hash * 0.33 * 100) +
-                    (mathScore / maxScores.math * 0.33 * 100) +
-                    (memoryScore / maxScores.memory * 0.34 * 100)
-                );
-                benchmarkResults.total = adjustedScore;
             }
 
             // Расчёт общей оценки
@@ -553,6 +559,13 @@
                     (mathScore / maxScores.math * testWeights.math * 100) +
                     (memoryScore / maxScores.memory * testWeights.memory * 100) +
                     (gpuScore / maxScores.gpu * testWeights.gpu * 100)
+                );
+            } else {
+                // Перераспределяем вес GPU между другими тестами
+                benchmarkResults.total = Math.round(
+                    (hashScore / maxScores.hash * 0.33 * 100) +
+                    (mathScore / maxScores.math * 0.33 * 100) +
+                    (memoryScore / maxScores.memory * 0.34 * 100)
                 );
             }
             
@@ -564,80 +577,79 @@
             
             showRecommendation(benchmarkResults.total);
             renderChart();
+        } catch (error) {
+            testStatus.textContent = "Ошибка при выполнении теста: " + error.message;
+            console.error(error);
         }
+    }
 
-        // Вспомогательные функции
-        function delay(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-
-        async function runTestWithProgress(testFunc, progressStart, progressEnd) {
-            const result = await testFunc();
-            const progress = progressStart + (progressEnd - progressStart) * 0.9;
-            progressBar.style.width = `${progress}%`;
-            return result;
-        }
-
-        function showRecommendation(score) {
-            let message = "";
-            let emoji = "";
-            
-            if (score >= 80) {
-                emoji = "🚀";
-                message = "Отличный результат! Ваше устройство обладает высокой производительностью.";
-            } else if (score >= 50) {
-                emoji = "👍";
-                message = "Хороший результат. Ваше устройство справляется с большинством задач.";
-            } else if (score >= 30) {
-                emoji = "⚠️";
-                message = "Средняя производительность. Возможно, стоит закрыть лишние вкладки и программы.";
-            } else {
-                emoji = "🐢";
-                message = "Низкая производительность. Рассмотрите возможность обновления оборудования.";
-            }
-            
-            recommendationEl.innerHTML = `
-                <h3>Рекомендации ${emoji}</h3>
-                <p>${message}</p>
-                <p>${getRandomTip()}</p>
-            `;
-        }
-
-        function getRandomTip() {
-            const tips = [
-                "Закройте неиспользуемые вкладки браузера для улучшения производительности.",
-                "Обновите браузер до последней версии для оптимальной работы.",
-                "Перезагрузите устройство, если тесты показывают неожиданно низкие результаты.",
-                "Отключите энергосберегающий режим для максимальной производительности."
-            ];
-            return tips[Math.floor(Math.random() * tips.length)];
-        }
-
-        // Назначение обработчиков
-        hashTestBtn.addEventListener('click', async () => {
-            await runHashTest();
-            resultsContainer.style.display = 'block';
-        });
+    // Показать рекомендации
+    function showRecommendation(score) {
+        let message = "";
+        let emoji = "";
         
-        mathTestBtn.addEventListener('click', async () => {
-            await runMathTest();
-            resultsContainer.style.display = 'block';
-        });
+        if (score >= 80) {
+            emoji = "🚀";
+            message = "Отличный результат! Ваше устройство обладает высокой производительностью.";
+        } else if (score >= 50) {
+            emoji = "👍";
+            message = "Хороший результат. Ваше устройство справляется с большинством задач.";
+        } else if (score >= 30) {
+            emoji = "⚠️";
+            message = "Средняя производительность. Возможно, стоит закрыть лишние вкладки и программы.";
+        } else {
+            emoji = "🐢";
+            message = "Низкая производительность. Рассмотрите возможность обновления оборудования.";
+        }
         
-        memoryTestBtn.addEventListener('click', async () => {
-            await runMemoryTest();
-            resultsContainer.style.display = 'block';
-        });
-        
-        gpuTestBtn.addEventListener('click', async () => {
-            await runGPUTest();
-            resultsContainer.style.display = 'block';
-        });
-        
-        fullTestBtn.addEventListener('click', runFullTest);
+        recommendationEl.innerHTML = `
+            <h3>Рекомендации ${emoji}</h3>
+            <p>${message}</p>
+            <p>${getRandomTip()}</p>
+        `;
+    }
 
-        // Инициализация при загрузке
-        init();
-    </script>
+    // Получить случайный совет
+    function getRandomTip() {
+        const tips = [
+            "Закройте неиспользуемые вкладки браузера для улучшения производительности.",
+            "Обновите браузер до последней версии для оптимальной работы.",
+            "Перезагрузите устройство, если тесты показывают неожиданно низкие результаты.",
+            "Отключите энергосберегающий режим для максимальной производительности."
+        ];
+        return tips[Math.floor(Math.random() * tips.length)];
+    }
+
+    // Вспомогательная функция задержки
+    function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Назначение обработчиков
+    hashTestBtn.addEventListener('click', async () => {
+        await runHashTest();
+        resultsContainer.style.display = 'block';
+    });
+    
+    mathTestBtn.addEventListener('click', async () => {
+        await runMathTest();
+        resultsContainer.style.display = 'block';
+    });
+    
+    memoryTestBtn.addEventListener('click', async () => {
+        await runMemoryTest();
+        resultsContainer.style.display = 'block';
+    });
+    
+    gpuTestBtn.addEventListener('click', async () => {
+        await runGPUTest();
+        resultsContainer.style.display = 'block';
+    });
+    
+    fullTestBtn.addEventListener('click', runFullTest);
+
+    // Инициализация при загрузке
+    init();
+</script>
 </body>
 </html>
