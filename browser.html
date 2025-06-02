@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Безопасность в нашем браузере</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --accent-color: #bb86fc;
+            --warning-color: #ff8a65;
+            --card-bg: #1e1e1e;
+            --font-main: 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #333;
+            padding-bottom: 1rem;
+        }
+        
+        h1 {
+            color: var(--accent-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: #9e9e9e;
+            font-size: 1.1rem;
+        }
+        
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .warning {
+            border-left: 4px solid var(--warning-color);
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .feature {
+            background-color: rgba(187, 134, 252, 0.1);
+            padding: 1rem;
+            border-radius: 6px;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: #757575;
+            font-size: 0.9rem;
+        }
+        
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+        
+        .button {
+            display: inline-block;
+            background-color: var(--accent-color);
+            color: #000;
+            padding: 0.7rem 1.5rem;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-top: 1rem;
+            transition: transform 0.2s;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Ваша безопасность — наш приоритет</h1>
+            <p class="subtitle">Но безопасность в интернете зависит от всех нас</p>
+        </header>
+        
+        <div class="card">
+            <h2>Что мы гарантируем</h2>
+            <p>Наш браузер разработан с уважением к вашей приватности:</p>
+            
+            <div class="features">
+                <div class="feature">
+                    <h3>🛡️ Базовая защита</h3>
+                    <p>Блокируем известные фишинговые сайты и вредоносные скрипты</p>
+                </div>
+                
+                <div class="feature">
+                    <h3>👁️ Нет слежки</h3>
+                    <p>Мы не собираем вашу историю просмотров и личные данные, если это происходит, вы нажали куда не надо, или приняли что-то не читая. </p>
+                </div>
+                
+                <div class="feature">
+                    <h3>🔒 Шифрование</h3>
+                    <p>Все синхронизированные данные зашифрованы</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Важная информация о безопасности</h2>
+            
+            <div class="warning">
+                <h3>⚠️ Ограничение ответственности</h3>
+                <p>Несмотря на все наши меры защиты, <strong>вы остаётесь главным защитником своих данных</strong>.</p>
+                <p>Мы не можем предотвратить потерю данных, если:</p>
+                <ul>
+                    <li>Вы введёте пароль на подозрительном сайте</li>
+                    <li>Сознательно обходите защитные механизмы</li>
+                    <li>Установите вредоносное расширение</li>
+                    <li>Поделитесь своими данными с третьими лицами</li>
+                </ul>
+            </div>
+            
+            <p>Мы постоянно работаем над улучшением защиты, но 100% безопасности в интернете не существует.</p>
+            
+            <a href="#" class="button">Как защитить себя →</a>
+        </div>
+        
+        <div class="card">
+            <h2>Наши рекомендации</h2>
+            <p>Чтобы минимизировать риски:</p>
+            <ol>
+                <li>Всегда проверяйте URL сайта перед вводом данных</li>
+                <li>Не обходите встроенную защиту без необходимости</li>
+                <li>Регулярно обновляйте браузер</li>
+            </ol>
+            <p>Мы добавили множество предупреждений, чтобы помочь вам избежать ошибок.</p>
+        </div>
+        
+        <footer>
+            <p>Браузер разработан с заботой о вашей приватности</p>
+            <p>© 2025 Goida Browser. Все права защищены.</p>
+        </footer>
+    </div>
+</body>
+</html>
