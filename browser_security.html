@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ссылка заблокирована | Безопасность</title>
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --bg-darker: #0a0a0a;
+            --text: #e0e0e0;
+            --text-warning: #ff6b6b;
+            --accent: #6a5acd;
+            --border: #333;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: var(--text-warning);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .warning-box {
+            background-color: var(--bg-darker);
+            border-left: 4px solid var(--text-warning);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .reasons {
+            background-color: rgba(255, 0, 0, 0.1);
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        ul {
+            padding-left: 20px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .domain-list {
+            font-family: monospace;
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.9em;
+            color: #888;
+        }
+        
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>⚠️ Ссылка заблокирована</h1>
+    
+    <div class="warning-box">
+        <p><strong>Наш браузер предотвратил переход по этой ссылке.</strong></p>
+        <p>С вероятностью <strong>99%</strong> она ведёт на фишинговый сайт, IP-логгер, майнинговый скрипт или другой опасный ресурс.</p>
+    </div>
+    
+    <h2>🔒 Почему ссылка заблокирована?</h2>
+    
+    <div class="reasons">
+        <p>Эта ссылка совпадает с известными угрозами:</p>
+        <ul>
+            <li><strong>IP-логгер</strong> — может украсть ваш IP-адрес и местоположение.</li>
+            <li><strong>Фишинг</strong> — подделка сайтов (например, фейковый вход в Steam, ВКонтакте, банки).</li>
+            <li><strong>Майнинг-скрипты</strong> — используют ваш процессор для добычи криптовалюты без вашего согласия.</li>
+            <li><strong>Вредоносные домены</strong> — могут заразить устройство вирусами.</li>
+            <li><strong>Обманные сайты</strong> — "бесплатный Robux", "хаки для игр", "активаторы Windows".</li>
+        </ul>
+    </div>
+    
+    <h2>🚫 Примеры заблокированных доменов</h2>
+    <div class="domain-list">
+        iplogger.org, iplogger.com, maper.info, iplogger.ru,<br>
+        grabify.link, facebook-login.com, steamcommunity.ru,<br>
+        coinhive.com, bit.ly (риск перенаправления)...
+    </div>
+    
+    <h2>🔍 Что делать?</h2>
+    <ul>
+        <li><strong>Не переходите</strong> по этой ссылке, даже если её прислал знакомый.</li>
+        <li><strong>Проверяйте URL</strong> – фишинговые сайты часто имитируют настоящие (например, <code>vkontakte.ru</code> вместо <code>vk.com</code>).</li>
+        <li><strong>Это всё на всякий случай</strong> – наш браузер и так всё блокирует, но всë равно будте осторожны.</li>
+    </ul>
+    <strong>Ваша безопасность — наш приоритет.</strong>
+    <div class="footer">
+        <p>Если считаете, что это ошибка, <a href="https://t.me/Goida_Studio_Support_bot/">сообщите нам</a>.</p>
+    © Goida Studio. 2025
+    </div>
+</body>
+</html>
