@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Предупреждение о безопасности - Goida Browser</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --primary-color: #bb86fc;
+            --secondary-color: #03dac6;
+            --warning-color: #ff4444;
+            --card-bg: #1e1e1e;
+            --border-radius: 12px;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .warning-container {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            max-width: 800px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border-left: 5px solid var(--warning-color);
+        }
+        
+        h1 {
+            color: var(--warning-color);
+            margin-top: 0;
+            font-size: 28px;
+        }
+        
+        h2 {
+            color: var(--primary-color);
+            font-size: 22px;
+            margin-top: 25px;
+        }
+        
+        .highlight {
+            color: var(--secondary-color);
+            font-weight: bold;
+        }
+        
+        ul {
+            padding-left: 20px;
+        }
+        
+        li {
+            margin-bottom: 10px;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            font-size: 14px;
+            opacity: 0.8;
+            border-top: 1px solid #333;
+            padding-top: 15px;
+        }
+        
+        .icon {
+            font-size: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--warning-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="warning-container">
+        <div class="icon">⚠️</div>
+        <h1>Важное предупреждение о безопасности</h1>
+        
+        <p>Приложение <span class="highlight">Goida Browser</span> позволяет загружать файлы из интернета, но мы должны предупредить вас о потенциальных рисках.</p>
+        
+        <h2>Потенциальные опасности:</h2>
+        <ul>
+            <li>Файлы могут содержать <span class="highlight">вирусы, трояны или другое вредоносное ПО</span></li>
+            <li>Некоторые файлы могут <span class="highlight">повредить ваше устройство</span> или украсть ваши данные</li>
+            <li>Исполняемые файлы  <span class="highlight">особенно опасны</span></li>
+            <li>Файлы могут содержать <span class="highlight">неожиданное или нежелательное содержимое</span></li>
+        </ul>
+        
+        <h2>Наша позиция:</h2>
+        <p>Разработчики <span class="highlight">Goida Browser</span> <span class="highlight">не несут ответственности</span> за:</p>
+        <ul>
+            <li>Любые повреждения устройства, вызванные скачанными файлами</li>
+            <li>Потерю данных в результате использования скачанных файлов</li>
+            <li>Любые другие последствия использования загруженных файлов</li>
+        </ul>
+        
+        <p>Загружая файлы через наше приложение <span class="highlight">с вашего явного согласия ("я даю согласие")</span>, вы полностью принимаете на себя все риски, связанные с использованием этих файлов.</p>
+        
+        <div class="footer">
+            <p>Рекомендуем:</p>
+            <ul>
+                <li>Загружать файлы только из проверенных источников</li>
+                <li>Проверять все файлы антивирусом перед открытием</li>
+                <li>Быть осторожными с файлами, требующими особых разрешений</li>
+            </ul>
+            <p>© Goida Studio. 2025</p>
+        </div>
+    </div>
+</body>
+</html>
