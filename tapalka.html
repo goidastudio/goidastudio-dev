@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G-Coin Mini</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
+            color: white;
+            user-select: none;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #FFD700;
+        }
+        
+        .level {
+            font-size: 22px;
+            font-weight: bold;
+            color: #FFA500;
+        }
+        
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        
+        .stat-box {
+            background-color: #1E1E1E;
+            border: 2px solid #FFD700;
+            border-radius: 10px;
+            padding: 15px;
+            flex: 1;
+        }
+        
+        .counter {
+            font-size: 36px;
+            font-weight: bold;
+        }
+        
+        .energy-container {
+            background-color: #1E1E1E;
+            border: 2px solid #00BFFF;
+            border-radius: 10px;
+            padding: 15px;
+            flex: 1;
+        }
+        
+        .energy-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #333333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .energy-fill {
+            height: 100%;
+            width: 100%;
+            background-color: #00BFFF;
+            transition: width 0.1s;
+        }
+        
+        .coin-button {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background-color: #FFD700;
+            border: 5px solid #FFA500;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px auto;
+            cursor: pointer;
+            font-size: 60px;
+            color: white;
+            box-shadow: 0 10px 20px rgba(255, 215, 0, 0.8);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        
+        .coin-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 5px 10px rgba(255, 215, 0, 0.6);
+        }
+        
+        .multiclick {
+            font-size: 16px;
+            font-weight: bold;
+            color: #00FF7F;
+            margin-bottom: 20px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .info-box {
+            background-color: #1E1E1E;
+            border: 2px solid #AAAAAA;
+            border-radius: 10px;
+            padding: 10px;
+            flex: 1;
+        }
+        
+        .info-label {
+            font-size: 14px;
+            color: #AAAAAA;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .upgrade-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            font-weight: bold;
+            margin-top: 20px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s;
+        }
+        
+        .upgrade-button:hover {
+            background-color: #45a049;
+        }
+        
+        .upgrade-button:disabled {
+            background-color: #555555;
+            cursor: not-allowed;
+        }
+
+.particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #FFD700;
+            pointer-events: none;
+        }
+        
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); opacity: 0.8; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(1.5); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">G-Coin Mini</div>
+            <div class="level" id="levelLabel">Ур. 1</div>
+        </div>
+        
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="counter" id="counterLabel">0</div>
+            </div>
+            <div class="energy-container">
+                <div>Энергия</div>
+                <div class="energy-bar">
+                    <div class="energy-fill" id="energyBar"></div>
+                </div>
+            </div>
+        </div>
+        
+        <button class="coin-button" id="coinButton" onclick="handleCoinClick()">💰</button>
+        
+        <div class="multiclick" id="multiclickLabel">Мультиклик: x1</div>
+        
+        <div class="info-row">
+            <div class="info-box">
+                <div class="info-label">Всего:</div>
+                <div class="info-value" id="totalLabel">0</div>
+            </div>
+            <div class="info-box">
+                <div class="info-label">За сеанс:</div>
+                <div class="info-value" id="sessionLabel">0</div>
+            </div>
+        </div>
+        
+        <button class="upgrade-button" id="upgradeButton">Улучшить энергию (100)</button>
+        <h1 id="name">Нету имени</h1>
+        <button class="info-box" onclick="crypt()"><h3 style="color: white;">Вывести</h3></button>
+    </div>
+    <script src="./CryptoJS/rollups/aes.js"></script>
+    <script>
+        // Игровые переменные
+        let counter = 0;
+        let total = 0;
+        let session = 0;
+        
+        // Система энергии
+        let energy = 100;
+        let maxEnergy = 100;
+        let energyRegen = 1.0;
+        let isCharging = false;
+        
+        // Система мультикликов
+        let multiclick = 1;
+        let multiclickThreshold = 50;
+        let isMultiClickActive = false;
+        let lastClickTime = 0;
+        
+        // Элементы интерфейса
+        const coinButton = document.getElementById('coinButton');
+        const counterLabel = document.getElementById('counterLabel');
+        const totalLabel = document.getElementById('totalLabel');
+        const sessionLabel = document.getElementById('sessionLabel');
+        const energyBar = document.getElementById('energyBar');
+        const multiclickLabel = document.getElementById('multiclickLabel');
+        const levelLabel = document.getElementById('levelLabel');
+        const upgradeButton = document.getElementById('upgradeButton');
+        
+        // Загрузка сохраненных данных
+        async function loadGame() {
+            total = parseInt(localStorage.getItem('total')) || 0;
+            maxEnergy = parseFloat(localStorage.getItem('maxEnergy')) || 100;
+            energyRegen = parseFloat(localStorage.getItem('energyRegen')) || 1.0;
+            multiclick = parseInt(localStorage.getItem('multiclick')) || 1;
+            multiclickThreshold = parseInt(localStorage.getItem('multiclickThreshold')) || 50;
+            
+            if(!localStorage.getItem("name")){
+                var res = await displayPromptAsync("Придумай имя", "Имя нельзя сменить.");
+                if(res !== null){
+                    localStorage.setItem("name", res);
+                    alert(`Вы ввели ${res}`);
+                }
+                else{
+                    window.open("index.html");
+                }
+            }
+            else{
+                document.getElementById("name").innerHTML = localStorage.getItem("name");
+            }
+            
+            energy = localStorage.getItem('energy') * 1 + 0;
+            
+            totalLabel.textContent = formatNumber(total);
+            updateEnergyBar();
+            multiclickLabel.textContent = `Мультиклик: x${multiclick}`;
+            updateUpgradeButton();
+        }
+        
+        // Форматирование чисел
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+        
+        // Обработчик клика по монете
+        function handleCoinClick() {
+            if (energy < 10) return;
+            
+            // Расход энергии
+            energy -= 10;
+            if (energy < 0) energy = 0;
+            updateEnergyBar();
+            
+            // Начисление монет
+            const coinsEarned = multiclick;
+            counter += coinsEarned;
+            total += coinsEarned;
+            session += coinsEarned;
+
+counterLabel.textContent = formatNumber(counter);
+            totalLabel.textContent = formatNumber(total);
+            sessionLabel.textContent = formatNumber(session);
+            
+            // Сохранение
+            localStorage.setItem('total', total);
+            localStorage.setItem('energy', energy);
+            // Анимация
+            animateCoin();
+            createParticles(isMultiClickActive ? 6 : 3);
+            
+            // Проверка достижений
+            checkAchievements();
+            
+            // Фиксация времени клика
+            lastClickTime = Date.now();
+        }
+        
+        // Анимация монеты
+        function animateCoin() {
+            coinButton.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                coinButton.style.transform = 'scale(1.0)';
+            }, 100);
+            
+            if (isMultiClickActive) {
+                coinButton.style.transform = 'rotate(10deg)';
+                setTimeout(() => {
+                    coinButton.style.transform = 'rotate(-10deg)';
+                    setTimeout(() => {
+                        coinButton.style.transform = 'rotate(0deg)';
+                    }, 100);
+                }, 50);
+            }
+        }
+        /**
+ * Аналог DisplayPromptAsync из MAUI - показывает модальное окно с полем ввода
+ * @param {string} title - Заголовок окна
+ * @param {string} message - Сообщение для пользователя
+ * @param {string} [placeholder=''] - Подсказка в поле ввода
+ * @param {string} [defaultValue=''] - Значение по умолчанию
+ * @param {string} [acceptButton='OK'] - Текст кнопки подтверждения
+ * @param {string} [cancelButton='Отмена'] - Текст кнопки отмены
+ * @returns {Promise<string|null>} Promise, который разрешается введенным текстом или null при отмене
+ */
+function displayPromptAsync(title, message, placeholder = '', defaultValue = '', acceptButton = 'OK', cancelButton = 'Отмена') {
+  return new Promise((resolve) => {
+    // Создаем элементы модального окна
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.right = '0';
+    overlay.style.bottom = '0';
+    overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+    overlay.style.zIndex = '1000';
+
+    const modal = document.createElement('div');
+    modal.style.backgroundColor = 'white';
+    modal.style.padding = '20px';
+    modal.style.borderRadius = '8px';
+    modal.style.width = '300px';
+    modal.style.maxWidth = '90%';
+    modal.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+
+    // Создаем содержимое модального окна
+    const titleEl = document.createElement('h3');
+    titleEl.textContent = title;
+    titleEl.style.marginTop = '0';
+    titleEl.style.color = '#333';
+
+    const messageEl = document.createElement('p');
+    messageEl.textContent = message;
+    messageEl.style.color = '#666';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = placeholder;
+    input.value = defaultValue;
+    input.style.width = '100%';
+    input.style.padding = '8px';
+    input.style.margin = '10px 0';
+    input.style.border = '1px solid #ddd';
+    input.style.borderRadius = '4px';
+
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.style.display = 'flex';
+    buttonsContainer.style.justifyContent = 'flex-end';
+    buttonsContainer.style.gap = '10px';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = cancelButton;
+    cancelBtn.style.padding = '8px 16px';
+    cancelBtn.style.border = 'none';
+    cancelBtn.style.borderRadius = '4px';
+    cancelBtn.style.backgroundColor = '#f0f0f0';
+    cancelBtn.style.cursor = 'pointer';
+
+    const acceptBtn = document.createElement('button');
+    acceptBtn.textContent = acceptButton;
+    acceptBtn.style.padding = '8px 16px';
+    acceptBtn.style.border = 'none';
+    acceptBtn.style.borderRadius = '4px';
+    acceptBtn.style.backgroundColor = '#007bff';
+    acceptBtn.style.color = 'white';
+    acceptBtn.style.cursor = 'pointer';
+
+    // Собираем модальное окно
+    buttonsContainer.appendChild(cancelBtn);
+    buttonsContainer.appendChild(acceptBtn);
+
+    modal.appendChild(titleEl);
+    modal.appendChild(messageEl);
+    modal.appendChild(input);
+    modal.appendChild(buttonsContainer);
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Фокус на поле ввода
+    input.focus();
+
+    // Обработчики событий
+    const cleanup = () => {
+      document.body.removeChild(overlay);
+    };
+
+    const handleAccept = () => {
+      cleanup();
+      resolve(input.value);
+    };
+
+    const handleCancel = () => {
+      cleanup();
+      resolve(null);
+    };
+
+    acceptBtn.addEventListener('click', handleAccept);
+    cancelBtn.addEventListener('click', handleCancel);
+
+    // Закрытие по нажатию Esc
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleCancel();
+      } else if (e.key === 'Enter') {
+        handleAccept();
+      }
+    };
+
+    overlay.addEventListener('keydown', handleKeyDown);
+
+    // Закрытие по клику вне модального окна
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        handleCancel();
+      }
+    });
+  });
+}
+
+
+        // Создание частиц
+        function createParticles(count) {
+            const coinRect = coinButton.getBoundingClientRect();
+            const centerX = coinRect.left + coinRect.width / 2;
+            const centerY = coinRect.top + coinRect.height / 2;
+            
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                // Случайный цвет золота
+                const goldVariant = 215 + Math.floor(Math.random() * 40);
+                particle.style.backgroundColor = `rgb(255, ${goldVariant}, 0)`;
+                
+                document.body.appendChild(particle);
+                
+                // Начальная позиция
+                particle.style.left = `${centerX - 4}px`;
+                particle.style.top = `${centerY - 4}px`;
+                
+                // Случайное направление
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 50 + Math.random() * 100;
+                const tx = Math.cos(angle) * distance;
+                const ty = Math.sin(angle) * distance;
+                
+                // Анимация
+                particle.style.setProperty('--tx', `${tx}px`);
+                particle.style.setProperty('--ty', `${ty}px`);
+                particle.style.animation = 'float 0.5s forwards';
+                
+                // Удаление после анимации
+                setTimeout(() => {
+                    particle.remove();
+                }, 500);
+            }
+        }
+        
+        // Обновление шкалы энергии
+        function updateEnergyBar() {
+            const percent = energy / maxEnergy * 100;
+            energyBar.style.width = `${percent}%`;
+        }
+        
+        // Проверка мультикликов
+        function checkMultiClick() {
+            const now = Date.now();
+            const timeSinceLastClick = now - lastClickTime;
+            
+            if (timeSinceLastClick < 300) {
+                if (!isMultiClickActive) {
+                    isMultiClickActive = true;
+                    multiclickLabel.style.color = '#00FF7F';
+                    animateMultiClickLabel();
+                }
+            } else {
+                if (isMultiClickActive) {
+                    isMultiClickActive = false;
+                    multiclickLabel.style.color = '#00FF7F';
+                }
+            }
+        }
+        
+        // Анимация label мультиклика
+        function animateMultiClickLabel() {
+            multiclickLabel.style.transform = 'scale(1.2)';
+            setTimeout(() => {
+                multiclickLabel.style.transform = 'scale(1.0)';
+            }, 100);
+        }
+        
+        // Проверка достижений
+        function checkAchievements() {
+            // Уровень энергии
+            const newLevel = Math.
+
+floor(maxEnergy / 50);
+            levelLabel.textContent = `Ур. ${newLevel}`;
+            
+            // Мультиклики
+            if (counter >= multiclickThreshold) {
+                multiclick++;
+                multiclickThreshold *= 2;
+                
+                localStorage.setItem('multiclick', multiclick);
+                localStorage.setItem('multiclickThreshold', multiclickThreshold);
+                
+                multiclickLabel.textContent = `Мультиклик: x${multiclick}`;
+                alert(`Улучшение!\nМультиклик повышен до x${multiclick}!`);
+            }
+        }
+        
+        // Стоимость улучшения
+        function getUpgradeCost() {
+            return Math.floor(50 * Math.pow(1.5, (maxEnergy / 50) - 1));
+        }
+        
+        // Обновление кнопки улучшения
+        function updateUpgradeButton() {
+            const cost = getUpgradeCost();
+            upgradeButton.textContent = `Улучшить энергию (${formatNumber(cost)})`;
+            upgradeButton.disabled = total < cost;
+        }
+        
+        // Улучшение энергии
+        function upgradeEnergy() {
+            const cost = getUpgradeCost();
+            
+            if (total >= cost) {
+                total -= cost;
+                maxEnergy += 50;
+                energyRegen += 0.5;
+                
+                totalLabel.textContent = formatNumber(total);
+                updateEnergyBar();
+                
+                localStorage.setItem('total', total);
+                localStorage.setItem('maxEnergy', maxEnergy);
+                localStorage.setItem('energyRegen', energyRegen);
+                
+                updateUpgradeButton();
+                alert(`Улучшено!\nМакс. энергия увеличена до ${maxEnergy}`);
+            } else {
+                alert(`Недостаточно!\nНужно ${formatNumber(cost)} G-Coin`);
+            }
+        }
+        
+        // Восстановление энергии
+        function regenEnergy() {
+            if (energy < maxEnergy && !isCharging) {
+                energy += energyRegen;
+                if (energy > maxEnergy) energy = maxEnergy;
+                updateEnergyBar();
+            }
+        }
+        
+        // Инициализация игры
+        function initGame() {
+            loadGame();
+            
+            // Обработчики событий
+            upgradeButton.addEventListener('click', upgradeEnergy);
+            
+            // Таймеры
+            setInterval(regenEnergy, 100);
+            setInterval(checkMultiClick, 300);
+        }
+        async function crypt(){
+            if(!localStorage.getItem("name")) return;
+            var mon = await displayPromptAsync("Сколько", "1₲ = 10000");
+            if(mon * 10000 <= total && mon !== null){
+            total -= (mon * 10000) + multiclick
+            handleCoinClick();
+            var encryptedAES = CryptoJS.encrypt(mon + " time:" + performance.now() + " name:" + localStorage.getItem("name"), "1246A@");
+            alert(`Код для вывода:${encryptedAES}`);
+            let textToCopy = encryptedAES;
+            const textarea = document.createElement('textarea');
+            textarea.value = textToCopy;
+            textarea.style.position = 'fixed';  // Чтобы не было прокрутки страницы
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    alert('Код скопирован в буфер обмена!');
+                } else {
+                    alert('Не удалось скопировать текст', true);
+                }
+            } catch (err) {
+                alert('Ошибка при копировании: ' + err, true);
+            }
+            
+            document.body.removeChild(textarea);
+            }
+            else{
+                alert("Недостасточно");
+            }
+        }
+        // Запуск игры
+        window.onload = initGame;
+    </script>
+</body>
+</html>
