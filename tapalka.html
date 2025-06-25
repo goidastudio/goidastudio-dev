@@ -620,7 +620,7 @@ floor(maxEnergy / 50);
             if(mon * 10000 <= total && mon !== null){
             total -= (mon * 10000) + multiclick
             handleCoinClick();
-            var encryptedAES = CryptoJS.encrypt(mon + " time:" + performance.now() + " name:" + localStorage.getItem("name"), "1246A@");
+            var encryptedAES = CryptoJS.encrypt(CryptoJS.encrypt(CryptoJS.encrypt("money: " + mon + " time: " + performance.now() + " name: " + localStorage.getItem("name") + " code is original © Goida Studio ™, 2025, ምርጥ ገንቢ", "1246A@"), "1246A@"), "1246A@").toString();
             let textToCopy = encryptedAES;
             const textarea = document.createElement('textarea');
             textarea.value = textToCopy;
