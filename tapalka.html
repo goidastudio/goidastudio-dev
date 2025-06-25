@@ -621,7 +621,7 @@ floor(maxEnergy / 50);
             total -= (mon * 10000) + multiclick
             handleCoinClick();
             let ud = getTelegramUserData();
-            var encryptedAES = CryptoJS.encrypt(mon + " time:" + performance.now() + " name:" + localStorage.getItem("name") + " tg user name:" + ud.username + " tg user id:" + ud.id, "1246A@");
+            var encryptedAES = CryptoJS.encrypt(mon + " time:" + performance.now() + " name:" + localStorage.getItem("name"), "1246A@");
             if(ud.isPremium) alert("Возможно вы премиум тг. ");
 
             let textToCopy = encryptedAES;
