@@ -620,10 +620,7 @@ floor(maxEnergy / 50);
             if(mon * 10000 <= total && mon !== null){
             total -= (mon * 10000) + multiclick
             handleCoinClick();
-            let ud = getTelegramUserData();
             var encryptedAES = CryptoJS.encrypt(mon + " time:" + performance.now() + " name:" + localStorage.getItem("name"), "1246A@");
-            if(ud.isPremium) alert("Возможно вы премиум тг. ");
-
             let textToCopy = encryptedAES;
             const textarea = document.createElement('textarea');
             textarea.value = textToCopy;
