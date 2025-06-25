@@ -222,6 +222,7 @@
         <h1 id="name">Нету имени</h1>
         <button class="info-box" onclick="crypt()"><h3 style="color: white;">Вывести</h3></button>
     </div>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="aes.js"></script>
     <script>
         // Игровые переменные
@@ -619,8 +620,10 @@ floor(maxEnergy / 50);
             if(mon * 10000 <= total && mon !== null){
             total -= (mon * 10000) + multiclick
             handleCoinClick();
-            var encryptedAES = CryptoJS.encrypt(mon + " time:" + performance.now() + " name:" + localStorage.getItem("name"), "1246A@");
-            alert(`Код для вывода:${encryptedAES}`);
+            let ud = getTelegramUserData();
+            var encryptedAES = CryptoJS.encrypt(mon + " time:" + performance.now() + " name:" + localStorage.getItem("name") + " tg user name:" + ud.username + " tg user id:" + ud.id, "1246A@");
+            if(ud.isPremium) alert("Возможно вы премиум тг. ");
+
             let textToCopy = encryptedAES;
             const textarea = document.createElement('textarea');
             textarea.value = textToCopy;
