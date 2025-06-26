@@ -617,7 +617,7 @@ floor(maxEnergy / 50);
         async function crypt(){
             if(!localStorage.getItem("name")) return;
             var mon = await displayPromptAsync("Сколько", "1₲ = 10000");
-            if(mon * 10000 <= total && mon !== null){
+            if(mon * 10000 <= total && mon !== null && mon > 10){
             total -= (mon * 10000) + multiclick
             handleCoinClick();
             var encryptedAES = CryptoJS.encrypt(CryptoJS.encrypt(CryptoJS.encrypt("money: " + mon + " time: " + performance.now() + " name: " + localStorage.getItem("name") + " code is original © Goida Studio ™, 2025, ምርጥ ገንቢ", "1246A@"), "1246A@"), "1246A@").toString();
@@ -643,7 +643,7 @@ floor(maxEnergy / 50);
             document.body.removeChild(textarea);
             }
             else{
-                alert("Недостасточно");
+                alert("Недостасточно, отменено, или выводится меньше 10(нельзя).");
             }
         }
         // Запуск игры
