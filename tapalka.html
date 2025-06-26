@@ -616,7 +616,7 @@ floor(maxEnergy / 50);
         }
         async function crypt(){
             if(!localStorage.getItem("name")) return;
-            var mon = await displayPromptAsync("Сколько", "1₲ = 10000");
+            var mon = await displayPromptAsync("Сколько", "1 G Coin mini = 10000");
             if(mon * 10000 <= total && mon !== null && mon >= 10){
             total -= (mon * 10000) + multiclick
             handleCoinClick();
