@@ -643,7 +643,13 @@ floor(maxEnergy / 50);
             document.body.removeChild(textarea);
             }
             else{
-                alert("Недостасточно, отменено, или выводится меньше 10(нельзя).");
+                if (mon === null) {
+  alert("Отменено");
+} else if (mon < 10) {
+  alert("Меньше минимального вывода (мин. вывод 10)");
+} else if (mon * 10000 > total) {
+  alert("Недостаточно");
+}
             }
         }
         // Запуск игры
