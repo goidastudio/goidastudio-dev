@@ -621,6 +621,7 @@ floor(maxEnergy / 50);
             total -= (mon * 10000) + multiclick
             handleCoinClick();
             var encryptedAES = CryptoJS.encrypt(CryptoJS.encrypt(CryptoJS.encrypt("money: " + mon + " time: " + performance.now() + " name: " + localStorage.getItem("name") + " code is original © Goida Studio ™, 2025, ምርጥ ገንቢ", "1246A@"), "1246A@"), "1246A@").toString();
+            alert("Код будет скопирован в буфер обмена(желательно ведите съёмку вывода): " + encryptedAES);
             let textToCopy = encryptedAES;
             const textarea = document.createElement('textarea');
             textarea.value = textToCopy;
