@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Чистая капля</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            touch-action: none;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+            background-color: #b2ebf2;
+            background-image: url('https://images.unsplash.com/photo-1495195129352-aeb325a55b65?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+            background-size: cover;
+            background-position: center;
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #333;
+            font-size: 18px;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        #restart {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            z-index: 100;
+        }
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            max-width: 80%;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        #message h2 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+        #message.fail h2 {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">Капли: <span id="dropsCount">0</span> | Загрязнение: <span id="pollution">0%</span></div>
+    <button id="restart">Перезапуск</button>
+    <div id="message"></div>
+
+    <script src="https://goidastudio.github.io/goidastudio-dev/gse-lib-0.1.js"></script>
+    <script>
+        // Инициализация движка
+        const engine = new GSEngine('gameCanvas', {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            gravity: { x: 0, y: 0 },
+            fixedDeltaTime: 0.02
+        },
+        "Чистая капля",
+        "Goida Studio");
+
+        // Сцена игры
+        const gameScene = engine.createScene('game');
+        engine.loadScene('game');
+
+        // Константы
+        const DROP_RADIUS = 15;
+        const TRASH_RADIUS = 8;
+        const MAX_POLLUTION = 0.15;
+        const DROP_COUNT = 20;
+        const TRASH_COUNT = 15;
+        const TRAIL_LENGTH = 10;
+        const TRAIL_OPACITY = 0.3;
+        const SAFE_ZONE = 30;
+        const TRASH_POLLUTION = 0.5;
+        const audio = new AudioPlayer();
+        audio.addSound("pulk", "./kapla.mp3");
+        // Глобальные переменные
+        let selectedDrop = null;
+        let pollutionLevel = 0;
+        let gameEnded = false;
+        let waterDrops = [];
+        let trashItems = [];
+        // Компонент капли воды
+        class WaterDrop extends Component {
+            constructor(radius, pollution = 0) {
+                super();
+                this.radius = radius;
+                this.pollution = pollution;
+                this.lastPositions = [];
+                this.baseColor = { r: 200, g: 240, b: 255 };
+                this.id = Math.random().toString(36).substr(2, 9);
+                this.beingDestroyed = false;
+                this.dirtParticles = [];
+                this.particleTime = 0;
+                this.generateDirtParticles();
+            }
+
+            generateDirtParticles() {
+                for (let i = 0; i < 20; i++) {
+                    this.dirtParticles.push({
+                        // Начальная позиция в полярных координатах
+                        angle: Math.random() * Math.PI * 2,
+                        dist: Math.random() * 0.7, // Начальное расстояние от центра
+                        size: 1 + Math.random() * 2,
+                        
+                        // Параметры движения
+                        speed: 0.2 + Math.random() * 0.3, // Скорость движения
+                        angleSpeed: (Math.random() - 0.5) * 0.02, // Скорость вращения
+                        distSpeed: (Math.random() - 0.5) * 0.01, // Скорость изменения расстояния
+                        targetDist: 0.3 + Math.random() * 0.5, // Целевое расстояние
+                        
+                        // Случайные смещения для плавности
+                        offset1: Math.random() * Math.PI * 2,
+                        offset2: Math.random() * Math.PI * 2
+                    });
+                }
+            }
+
+            update(deltaTime) {                
+                if (this.gameObject === selectedDrop) {
+                    this.lastPositions.push({
+                        x: this.gameObject.transform.position.x,
+                        y: this.gameObject.transform.position.y,
+                        radius: this.radius
+                    });
+                    
+                    if (this.lastPositions.length > TRAIL_LENGTH) {
+                        this.lastPositions.shift();
+                    }
+                } else {
+                    this.lastPositions = [];
+                }
+                
+                // Обновляем анимацию частиц
+                this.particleTime += deltaTime;
+                
+                // Обновляем каждую частицу
+                for (const p of this.dirtParticles) {
+                    // Плавное изменение угла
+                    p.angle += p.angleSpeed;
+                    
+                    // Плавное изменение расстояния от центра
+                    p.dist += (p.targetDist - p.dist) * 0.01;
+                    
+                    // Если частица достигла целевого расстояния, выбираем новое
+                    if (Math.abs(p.dist - p.targetDist) < 0.01) {
+                        p.targetDist = 0.3 + Math.random() * 0.5;
+                    }
+                    
+                    // Небольшие колебания для более естественного движения
+                    p.angle += Math.sin(this.particleTime * 0.5 + p.offset1) * 0.01;
+                    p.dist += Math.sin(this.particleTime * 0.8 + p.offset2) * 0.005;
+                    
+                    // Ограничиваем расстояние, чтобы частицы не выходили за пределы капли
+                    p.dist = Math.max(0.1, Math.min(0.8, p.dist));
+                }
+            }
+
+            render(ctx) {
+                if (this.lastPositions.length > 1 && this.gameObject === selectedDrop) {
+                    ctx.save();
+                    ctx.globalAlpha = TRAIL_OPACITY;
+                    for (let i = 0; i < this.lastPositions.length - 1; i++) {
+                        const pos = this.lastPositions[i];
+                        const nextPos = this.lastPositions[i+1];
+                        
+                        const gradient = ctx.createLinearGradient(
+                            pos.x, pos.y,
+                            nextPos.x, nextPos.y
+                        );
+                        gradient.addColorStop(0, `rgba(200, 240, 255, ${0.3 * (i/this.lastPositions.length)})`);
+                        gradient.addColorStop(1, `rgba(200, 240, 255, ${0.1 * (i/this.lastPositions.length)})`);
+                        
+                        ctx.strokeStyle = gradient;
+                        ctx.lineWidth = pos.radius * 0.8;
+                        ctx.beginPath();
+                        ctx.moveTo(pos.x, pos.y);
+                        ctx.lineTo(nextPos.x, nextPos.y);
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                }
+
+                ctx.save();
+                ctx.translate(
+                    this.gameObject.transform.position.x,
+                    this.gameObject.transform.position.y
+                );
+
+                const pollutionEffect = this.pollution * 150;
+                const baseR = Math.max(0, 200 - pollutionEffect);
+                const baseG = Math.max(0, 240 - pollutionEffect);
+                const baseB = Math.max(0, 255 - pollutionEffect * 0.8);
+                
+                ctx.fillStyle = `rgba(${baseR}, ${baseG}, ${baseB}, ${0.8 - this.pollution * 0.3})`;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                const highlightAlpha = 0.4 * (1 - this.pollution);
+                ctx.fillStyle = `rgba(255, 255, 255, ${highlightAlpha})`;
+                ctx.beginPath();
+                ctx.arc(
+                    -this.radius * 0.3,
+                    -this.radius * 0.3,
+                    this.radius * 0.2,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+
+                if (this.pollution > 0.1) {
+                    const visibleParticles = Math.floor(this.dirtParticles.length * this.pollution);
+                    ctx.fillStyle = `rgba(50, 50, 50, ${0.3 + this.pollution * 0.5})`;
+                    
+                    for (let i = 0; i < visibleParticles; i++) {
+                        const p = this.dirtParticles[i];
+                        
+                        // Позиция частицы с учетом анимации
+                        const x = Math.cos(p.angle) * p.dist * this.radius;
+                        const y = Math.sin(p.angle) * p.dist * this.radius;
+                        
+                        // Небольшое дрожание для реалистичности
+                        const jitterX = Math.sin(this.particleTime * 2 + p.offset1) * 0.5;
+                        const jitterY = Math.cos(this.particleTime * 1.7 + p.offset2) * 0.5;
+                        
+                        ctx.beginPath();
+                        ctx.arc(
+                            x + jitterX,
+                            y + jitterY,
+                            p.size,
+                            0,
+                            Math.PI * 2
+                        );
+                        ctx.fill();
+                    }
+                }
+
+                ctx.restore();
+            }
+        }
+
+        // Компонент мусора
+        class TrashItem extends Component {
+            constructor(radius, pollution = 0) {
+                super();
+                this.radius = radius;
+                this.pollution = pollution;
+                this.id = Math.random().toString(36).substr(2, 9);
+            }
+
+            render(ctx) {
+                ctx.save();
+                ctx.translate(
+                    this.gameObject.transform.position.x,
+                    this.gameObject.transform.position.y
+                );
+
+                ctx.fillStyle = 'rgba(100, 100, 100, 0.9)';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'rgba(70, 70, 70, 0.9)';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        class Draggable extends Component {
+            constructor() {
+                super();
+                this.isDragging = false;
+                this.startPos = { x: 0, y: 0 };
+            }
+
+            start() {
+                this.canvas = this.engine.canvas;
+                
+                this.canvas.addEventListener('touchstart', (e) => this.handleStart(e.touches[0].clientX, e.touches[0].clientY));
+                this.canvas.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    this.handleMove(e.touches[0].clientX, e.touches[0].clientY);
+                });
+                this.canvas.addEventListener('touchend', () => this.handleEnd());
+
+                this.canvas.addEventListener('mousedown', (e) => this.handleStart(e.clientX, e.clientY));
+                this.canvas.addEventListener('mousemove', (e) => this.handleMove(e.clientX, e.clientY));
+                this.canvas.addEventListener('mouseup', () => this.handleEnd());
+            }
+
+            handleStart(clientX, clientY) {
+                if (gameEnded) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const x = clientX - rect.left;
+                const y = clientY - rect.top;
+
+                const drop = this.gameObject.getComponent(WaterDrop);
+                if (!drop) return;
+
+                const dist = Math.sqrt(
+                    Math.pow(x - this.gameObject.transform.position.x, 2) +
+                    Math.pow(y - this.gameObject.transform.position.y, 2)
+                );
+
+                if (dist <= drop.radius && !selectedDrop) {
+                    this.isDragging = true;
+                    selectedDrop = this.gameObject;
+                    this.startPos = { x, y };
+                }
+            }
+
+            handleMove(clientX, clientY) {
+                if (!this.isDragging || gameEnded) return;
+
+                const rect = this.canvas.getBoundingClientRect();
+                const x = clientX - rect.left;
+                const y = clientY - rect.top;
+
+                this.gameObject.transform.position.x = Math.max(SAFE_ZONE, Math.min(engine.canvas.width - SAFE_ZONE, x));
+                this.gameObject.transform.position.y = Math.max(SAFE_ZONE, Math.min(engine.canvas.height - SAFE_ZONE, y));
+
+                this.checkCollisions();
+            }
+
+            handleEnd() {
+                this.isDragging = false;
+                if (this.gameObject === selectedDrop) {
+                    selectedDrop = null;
+                }
+            }
+
+            checkCollisions() {
+                const currentDrop = this.gameObject.getComponent(WaterDrop);
+                if (!currentDrop || currentDrop.beingDestroyed) return;
+
+                for (const obj of engine.gameObjects) {
+                    if (obj === this.gameObject) continue;
+
+                    const otherDrop = obj.getComponent(WaterDrop);
+                    if (otherDrop && !otherDrop.beingDestroyed) {
+                        const dist = Math.sqrt(
+                            Math.pow(this.gameObject.transform.position.x - obj.transform.position.x, 2) +
+                            Math.pow(this.gameObject.transform.position.y - obj.transform.position.y, 2)
+                        );
+
+                        const minDist = currentDrop.radius + otherDrop.radius;
+                        if (dist < minDist) {
+                            this.mergeWaterDrops(this.gameObject, obj);
+                            break;
+                        }
+                    }
+
+                    const trash = obj.getComponent(TrashItem);
+                    if (trash) {
+                        const dist = Math.sqrt(
+                            Math.pow(this.gameObject.transform.position.x - obj.transform.position.x, 2) +
+                            Math.pow(this.gameObject.transform.position.y - obj.transform.position.y, 2)
+                        );
+
+                        const minDist = currentDrop.radius + trash.radius;
+                        if (dist < minDist) {
+                            this.collectTrash(this.gameObject, obj);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            mergeWaterDrops(drop1, drop2) {
+                const dropComp1 = drop1.getComponent(WaterDrop);
+                const dropComp2 = drop2.getComponent(WaterDrop);
+                if (!dropComp1 || !dropComp2 || dropComp2.beingDestroyed) return;
+
+                dropComp2.beingDestroyed = true;
+
+                const newRadius = Math.sqrt(dropComp1.radius * dropComp1.radius + dropComp2.radius * dropComp2.radius);
+                const totalPollution = (dropComp1.pollution * Math.PI * dropComp1.radius * dropComp1.radius +
+                                      dropComp2.pollution * Math.PI * dropComp2.radius * dropComp2.radius) /
+                                     (Math.PI * newRadius * newRadius);
+
+                dropComp1.radius = newRadius;
+                dropComp1.pollution = totalPollution;
+
+                // Объединяем частицы мусора
+                dropComp1.dirtParticles = [...dropComp1.dirtParticles, ...dropComp2.dirtParticles];
+                
+                waterDrops = waterDrops.filter(d => d !== drop2);
+                
+                setTimeout(() => {
+                    if (drop2 && drop2.getComponent) {
+                        engine.destroy(drop2);
+                    }
+                }, 0);
+                audio.playSrc("./kapla.mp3");
+                pollutionLevel = totalPollution;
+                updateUI();
+
+                this.checkGameEnd();
+            }
+
+            collectTrash(drop, trash) {
+                const dropComp = drop.getComponent(WaterDrop);
+                const trashComp = trash.getComponent(TrashItem);
+                if (!dropComp || !trashComp) return;
+
+                const areaRatio = (trashComp.radius * trashComp.radius) / (dropComp.radius * dropComp.radius);
+                const pollutionEffect = trashComp.pollution * areaRatio * 2;
+                
+                dropComp.pollution = Math.min(1, dropComp.pollution + pollutionEffect);
+
+                // Добавляем новые частицы мусора при сборе мусора
+                for (let i = 0; i < 3; i++) {
+                    dropComp.dirtParticles.push({
+                        angle: Math.random() * Math.PI * 2,
+                        dist: Math.random() * 0.7,
+                        size: 1 + Math.random() * 2,
+                        speed: 0.2 + Math.random() * 0.3,
+                        angleSpeed: (Math.random() - 0.5) * 0.02,
+                        distSpeed: (Math.random() - 0.5) * 0.01,
+                        targetDist: 0.3 + Math.random() * 0.5,
+                        offset1: Math.random() * Math.PI * 2,
+                        offset2: Math.random() * Math.PI * 2
+                    });
+                }
+                
+                trashItems = trashItems.filter(t => t.id !== trash.id);
+                
+                setTimeout(() => {
+                    if (trash && trash.getComponent) {
+                        engine.destroy(trash);
+                    }
+                }, 0);
+                audio.playSrc("./kapla.mp3");
+                pollutionLevel = dropComp.pollution;
+                updateUI();
+            }
+
+            checkGameEnd() {
+                if (waterDrops.length === 1) {
+                    gameEnded = true;
+                    const messageElement = document.getElementById('message');
+                    
+                    if (pollutionLevel <= MAX_POLLUTION) {
+                        messageElement.innerHTML = `
+                            <h2>Победа!</h2>
+                            <p>Вы успешно объединили все капли</p>
+                            <p>Уровень загрязнения: ${(pollutionLevel * 100).toFixed(0)}%</p>
+                        `;
+                        messageElement.className = '';
+                    } else {
+                        messageElement.innerHTML = `
+                            <h2>Победа с загрязнением</h2>
+                            <p>Вы объединили все капли, но вода загрязнена</p>
+                            <p>Уровень загрязнения: ${(pollutionLevel * 100).toFixed(0)}%</p>
+                            <p>(Рекомендуемый уровень: до ${MAX_POLLUTION*100}%)</p>
+                        `;
+                        messageElement.className = '';
+                    }
+                    messageElement.style.display = 'block';
+                }
+            }
+        }
+
+        function createLevel(dropCount, trashCount) {
+            gameEnded = false;
+            document.getElementById('message').style.display = 'none';
+            waterDrops = [];
+            trashItems = [];
+            
+            const toRemove = [];
+            for (const obj of engine.gameObjects) {
+                if (obj.getComponent(WaterDrop) || obj.getComponent(TrashItem)) {
+                    toRemove.push(obj);
+                }
+            }
+            toRemove.forEach(obj => engine.destroy(obj));
+
+            for (let i = 0; i < dropCount; i++) {
+                let position, overlapping;
+                let attempts = 0;
+                
+                do {
+                    overlapping = false;
+                    position = {
+                        x: SAFE_ZONE + Math.random() * (engine.canvas.width - SAFE_ZONE * 2),
+                        y: SAFE_ZONE + Math.random() * (engine.canvas.height - SAFE_ZONE * 2)
+                    };
+                    
+                    for (const drop of waterDrops) {
+                        const dist = Math.sqrt(
+                            Math.pow(position.x - drop.transform.position.x, 2) +
+                            Math.pow(position.y - drop.transform.position.y, 2)
+                        );
+                        
+                        if (dist < DROP_RADIUS * 2) {
+                            overlapping = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!overlapping) {
+                        for (const trash of trashItems) {
+                            const dist = Math.sqrt(
+                                Math.pow(position.x - trash.transform.position.x, 2) +
+                                Math.pow(position.y - trash.transform.position.y, 2)
+                            );
+                            
+                            if (dist < (DROP_RADIUS + TRASH_RADIUS)) {
+                                overlapping = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    attempts++;
+                    if (attempts > 100) break;
+                } while (overlapping);
+
+                const drop = engine.createGameObject('water_drop_' + i, [
+                    WaterDrop,
+                    Draggable
+                ]);
+
+                drop.transform.position = position;
+                const dropComp = drop.getComponent(WaterDrop);
+                dropComp.radius = DROP_RADIUS * (0.9 + Math.random() * 0.2);
+                waterDrops.push(drop);
+            }
+
+            for (let i = 0; i < trashCount; i++) {
+                let position, overlapping;
+                let attempts = 0;
+                
+                do {
+                    overlapping = false;
+                    position = {
+                        x: SAFE_ZONE + Math.random() * (engine.canvas.width - SAFE_ZONE * 2),
+                        y: SAFE_ZONE + Math.random() * (engine.canvas.height - SAFE_ZONE * 2)
+                    };
+                    
+                    for (const drop of waterDrops) {
+                        const dist = Math.sqrt(
+                            Math.pow(position.x - drop.transform.position.x, 2) +
+                            Math.pow(position.y - drop.transform.position.y, 2)
+                        );
+                        
+                        if (dist < (DROP_RADIUS + TRASH_RADIUS)) {
+                            overlapping = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!overlapping) {
+                        for (const trash of trashItems) {
+                            const dist = Math.sqrt(
+                                Math.pow(position.x - trash.transform.position.x, 2) +
+                                Math.pow(position.y - trash.transform.position.y, 2)
+                            );
+                            
+                            if (dist < TRASH_RADIUS * 2) {
+                                overlapping = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    attempts++;
+                    if (attempts > 100) break;
+                } while (overlapping);
+
+                const trash = engine.createGameObject('trash_' + i, [
+                    TrashItem
+                ]);
+
+                trash.transform.position = position;
+                const trashComp = trash.getComponent(TrashItem);
+                trashComp.radius = TRASH_RADIUS * (0.9 + Math.random() * 0.2);
+                trashComp.pollution = TRASH_POLLUTION;
+                trashItems.push(trash);
+            }
+
+            pollutionLevel = 0;
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('dropsCount').textContent = waterDrops.length;
+            document.getElementById('pollution').textContent = (pollutionLevel * 100).toFixed(0) + "%";
+            
+            const pollutionElement = document.getElementById('pollution');
+            if (pollutionLevel > MAX_POLLUTION) {
+                pollutionElement.style.color = '#f44336';
+                pollutionElement.style.fontWeight = 'bold';
+            } else {
+                pollutionElement.style.color = '#4CAF50';
+                pollutionElement.style.fontWeight = 'normal';
+            }
+        }
+
+        // Инициализация кнопок
+        document.getElementById('restart').addEventListener('click', () => {
+            selectedDrop = null;
+            pollutionLevel = 0;
+            gameEnded = false;
+            waterDrops = [];
+            trashItems = [];
+            window.location.reload();
+        });
+
+        window.addEventListener('resize', () => {
+            engine.canvas.width = window.innerWidth;
+            engine.canvas.height = window.innerHeight;
+            createLevel(DROP_COUNT, TRASH_COUNT);
+        });
+
+        // Начало игры
+        createLevel(DROP_COUNT, TRASH_COUNT);
+    </script>
+</body>
+</html>
