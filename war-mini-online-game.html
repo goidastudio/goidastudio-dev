@@ -102,7 +102,7 @@
 
     <script>
         // ===== НАСТРОЙКИ ИГРЫ =====
-        const PLAYER_SPEED = 3;
+        const PLAYER_SPEED = 1;
         const BULLET_SPEED = 10;
         const PLAYER_SIZE = 40;
         const BULLET_SIZE = 10;
@@ -214,7 +214,7 @@
                     spawnBullet(data.x, data.y, data.angle, data.playerId);
                     break;
                 case "playerHit":
-                    if (players[data.playerId]) {
+                    if (players[data.playerId] && data.playerId !== data.attackerId) {
                         players[data.playerId].health -= data.damage;
                         updateHealthBar(data.playerId);
                         
@@ -226,6 +226,9 @@
                 case "playerDeath":
                     if (players[data.playerId]) {
                         engine.destroy(players[data.playerId].gameObject);
+                        if (players[data.playerId].healthBar) {
+                            document.body.removeChild(players[data.playerId].healthBar);
+                        }
                         delete players[data.playerId];
                         
                         if (data.playerId !== localPlayerId && isHost) {
@@ -250,6 +253,15 @@
             if (player && player.healthBar) {
                 const healthPercent = Math.max(0, player.health / PLAYER_HEALTH * 100);
                 player.healthBarFill.style.width = `${healthPercent}%`;
+                
+                // Меняем цвет в зависимости от уровня здоровья
+                if (healthPercent < 30) {
+                    player.healthBarFill.style.background = 'red';
+                } else if (healthPercent < 60) {
+                    player.healthBarFill.style.background = 'yellow';
+                } else {
+                    player.healthBarFill.style.background = 'green';
+                }
             }
         }
 
@@ -300,11 +312,14 @@
             collider.onCollision = (other) => {
                 if (other.gameObject.name.startsWith("Bullet_")) {
                     const bulletOwner = other.gameObject.name.split('_')[2];
+                    
+                    // Проверяем, что пуля не своя
                     if (bulletOwner !== id) {
                         broadcast({
                             type: "playerHit",
                             playerId: id,
-                            damage: BULLET_DAMAGE
+                            damage: BULLET_DAMAGE,
+                            attackerId: bulletOwner
                         });
                         engine.destroy(other.gameObject);
                         
