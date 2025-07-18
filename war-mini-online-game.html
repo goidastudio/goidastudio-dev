@@ -74,6 +74,19 @@
             left: 30px;
             transition: transform 0.1s;
         }
+        .health-bar {
+            position: absolute;
+            width: 40px;
+            height: 5px;
+            background: red;
+            top: -10px;
+            left: 0;
+        }
+        .health-bar-fill {
+            height: 100%;
+            background: green;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -89,7 +102,7 @@
 
     <script>
         // ===== НАСТРОЙКИ ИГРЫ =====
-        const PLAYER_SPEED = 1;
+        const PLAYER_SPEED = 3;
         const BULLET_SPEED = 10;
         const PLAYER_SIZE = 40;
         const BULLET_SIZE = 10;
@@ -155,7 +168,8 @@
                                     id: k,
                                     x: players[k].x,
                                     y: players[k].y,
-                                    rotation: players[k].rotation
+                                    rotation: players[k].rotation,
+                                    health: players[k].health
                                 }))
                             });
                         });
@@ -180,7 +194,7 @@
             switch (data.type) {
                 case "init":
                     data.players.forEach(p => {
-                        if (!players[p.id]) spawnPlayer(p.id, false);
+                        if (!players[p.id]) spawnPlayer(p.id, false, p.health);
                     });
                     break;
                 case "join":
@@ -202,6 +216,8 @@
                 case "playerHit":
                     if (players[data.playerId]) {
                         players[data.playerId].health -= data.damage;
+                        updateHealthBar(data.playerId);
+                        
                         if (players[data.playerId].health <= 0 && isHost) {
                             broadcast({ type: "playerDeath", playerId: data.playerId });
                         }
@@ -228,6 +244,15 @@
             }
         }
 
+        // Обновление полоски здоровья
+        function updateHealthBar(playerId) {
+            const player = players[playerId];
+            if (player && player.healthBar) {
+                const healthPercent = Math.max(0, player.health / PLAYER_HEALTH * 100);
+                player.healthBarFill.style.width = `${healthPercent}%`;
+            }
+        }
+
         // Отправка данных всем игрокам
         function broadcast(data) {
             connections.forEach(conn => {
@@ -241,13 +266,33 @@
         }
 
         // ===== ИГРОВЫЕ ОБЪЕКТЫ =====
-        function spawnPlayer(id, isLocal) {
+        function spawnPlayer(id, isLocal, initialHealth = PLAYER_HEALTH) {
             const player = engine.createGameObject(`Player_${id}`, [SpriteRenderer, BoxCollider2D], "players");
             player.transform.position.x = Math.random() * (engine.canvas.width - PLAYER_SIZE);
             player.transform.position.y = Math.random() * (engine.canvas.height - PLAYER_SIZE);
             player.getComponent(SpriteRenderer).loadImage(SPRITES.player);
             player.getComponent(SpriteRenderer).width = PLAYER_SIZE;
             player.getComponent(SpriteRenderer).height = PLAYER_SIZE;
+            
+            // Создаем полоску здоровья
+            const healthBar = document.createElement('div');
+            healthBar.className = 'health-bar';
+            const healthBarFill = document.createElement('div');
+            healthBarFill.className = 'health-bar-fill';
+            healthBar.appendChild(healthBarFill);
+            document.body.appendChild(healthBar);
+            
+            // Позиционируем полоску здоровья над игроком
+            const updateHealthBarPosition = () => {
+                const canvasRect = engine.canvas.getBoundingClientRect();
+                const playerPos = player.transform.position;
+                healthBar.style.left = `${canvasRect.left + playerPos.x - PLAYER_SIZE/2}px`;
+                healthBar.style.top = `${canvasRect.top + playerPos.y - PLAYER_SIZE/2 - 10}px`;
+            };
+            
+            player.update = () => {
+                updateHealthBarPosition();
+            };
             
             const collider = player.getComponent(BoxCollider2D);
             collider.width = PLAYER_SIZE;
@@ -262,6 +307,16 @@
                             damage: BULLET_DAMAGE
                         });
                         engine.destroy(other.gameObject);
+                        
+                        // Обновляем здоровье локально для мгновенной обратной связи
+                        if (players[id]) {
+                            players[id].health -= BULLET_DAMAGE;
+                            updateHealthBar(id);
+                            
+                            if (players[id].health <= 0 && isHost) {
+                                broadcast({ type: "playerDeath", playerId: id });
+                            }
+                        }
                     }
                 }
             };
@@ -271,9 +326,14 @@
                 x: player.transform.position.x,
                 y: player.transform.position.y,
                 rotation: 0,
-                health: PLAYER_HEALTH,
-                isLocal
+                health: initialHealth,
+                isLocal,
+                healthBar,
+                healthBarFill
             };
+
+            updateHealthBar(id);
+            updateHealthBarPosition();
 
             if (isLocal) {
                 setupMobileControls(player);
@@ -364,6 +424,7 @@
                 });
             });
 
+            const playerUpdate = player.update;
             player.update = () => {
                 if (moveJoystick.active) {
                     const newX = Math.max(PLAYER_SIZE/2, 
@@ -377,6 +438,8 @@
                     player.transform.position.y = newY;
                 }
 
+                if (playerUpdate) playerUpdate();
+                
                 broadcast({
                     type: "playerUpdate",
                     id: localPlayerId,
