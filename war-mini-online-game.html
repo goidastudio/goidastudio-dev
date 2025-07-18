@@ -89,7 +89,7 @@
 
     <script>
         // ===== НАСТРОЙКИ ИГРЫ =====
-        const PLAYER_SPEED = 3;
+        const PLAYER_SPEED = 1;
         const BULLET_SPEED = 10;
         const PLAYER_SIZE = 40;
         const BULLET_SIZE = 10;
@@ -121,31 +121,22 @@
         let isHost = false;
         let players = {};
         let localPlayerId = null;
-
-        // ===== УПРАВЛЕНИЕ =====
-        const moveJoystick = {
-            x: 0, y: 0, active: false, touchId: null,
-            element: document.getElementById("moveJoystick"),
-            knob: document.getElementById("moveKnob")
-        };
-        
-        const aimJoystick = {
-            x: 0, y: 0, active: false, touchId: null,
-            element: document.getElementById("aimJoystick"),
-            knob: document.getElementById("aimKnob"),
-            lastPosition: { x: 0, y: 0 }
-        };
+        let roomId = null;
 
         // Инициализация P2P
-        function initP2P(roomId = null) {
-            if (!roomId) {
-                roomId = Math.random().toString(36).substring(2, 8);
-                isHost = true;
+        function initP2P(room = null) {
+            roomId = room || Math.random().toString(36).substring(2, 8);
+            isHost = !room;
+            
+            if (isHost) {
                 window.location.hash = roomId;
             }
-
+            
             document.getElementById("roomLink").textContent = `Room: ${roomId}`;
-            peer = new Peer();
+            
+            // Генерируем уникальный ID для текущего клиента
+            const peerId = isHost ? roomId : `${roomId}-${Math.random().toString(36).substr(2, 8)}`;
+            peer = new Peer(peerId);
             
             peer.on('open', (id) => {
                 localPlayerId = id;
@@ -153,31 +144,39 @@
                 
                 if (isHost) {
                     peer.on('connection', (conn) => {
-                        conn.on('data', handleData);
-                        connections.push(conn);
-                        conn.send({ 
-                            type: "init", 
-                            players: Object.keys(players).map(k => ({
-                                id: k,
-                                x: players[k].x,
-                                y: players[k].y,
-                                rotation: players[k].rotation
-                            }))
+                        conn.on('open', () => {
+                            conn.on('data', (data) => handleData(data, conn));
+                            connections.push(conn);
+                            
+                            // Отправляем новому игроку текущее состояние игры
+                            conn.send({ 
+                                type: "init", 
+                                players: Object.keys(players).map(k => ({
+                                    id: k,
+                                    x: players[k].x,
+                                    y: players[k].y,
+                                    rotation: players[k].rotation
+                                }))
+                            });
                         });
                     });
                 } else {
-                    const hostConn = peer.connect(roomId);
-                    hostConn.on('open', () => {
-                        hostConn.send({ type: "join", id });
+                    const conn = peer.connect(roomId);
+                    conn.on('open', () => {
+                        conn.on('data', (data) => handleData(data, conn));
+                        connections.push(conn);
+                        conn.send({ type: "join", id: localPlayerId });
                     });
-                    hostConn.on('data', handleData);
-                    connections.push(hostConn);
                 }
+            });
+            
+            peer.on('error', (err) => {
+                console.error('PeerJS error:', err);
             });
         }
 
         // Обработка входящих данных
-        function handleData(data) {
+        function handleData(data, conn) {
             switch (data.type) {
                 case "init":
                     data.players.forEach(p => {
@@ -216,8 +215,14 @@
                         if (data.playerId !== localPlayerId && isHost) {
                             setTimeout(() => {
                                 spawnPlayer(data.playerId, false);
+                                broadcast({ type: "playerRespawn", playerId: data.playerId });
                             }, 3000);
                         }
+                    }
+                    break;
+                case "playerRespawn":
+                    if (!players[data.playerId]) {
+                        spawnPlayer(data.playerId, false);
                     }
                     break;
             }
@@ -225,7 +230,14 @@
 
         // Отправка данных всем игрокам
         function broadcast(data) {
-            connections.forEach(conn => conn.send(data));
+            connections.forEach(conn => {
+                if (conn.open) {
+                    conn.send(data);
+                } else {
+                    // Удаляем закрытые соединения
+                    connections = connections.filter(c => c !== conn);
+                }
+            });
         }
 
         // ===== ИГРОВЫЕ ОБЪЕКТЫ =====
@@ -298,8 +310,35 @@
         // ===== УПРАВЛЕНИЕ НА МОБИЛЬНЫХ =====
         function setupMobileControls(player) {
             const fireButton = document.getElementById("fireButton");
+            if (!fireButton) {
+                console.error("Fire button not found!");
+                return;
+            }
 
             // Инициализация джойстиков
+            const moveJoystick = {
+                x: 0, y: 0, active: false, touchId: null,
+                element: document.getElementById("moveJoystick"),
+                knob: document.getElementById("moveKnob")
+            };
+            
+            const aimJoystick = {
+                x: 0, y: 0, active: false, touchId: null,
+                element: document.getElementById("aimJoystick"),
+                knob: document.getElementById("aimKnob"),
+                lastPosition: { x: 0, y: 0 }
+            };
+
+            if (!moveJoystick.element || !moveJoystick.knob) {
+                console.error("Move joystick elements not found!");
+                return;
+            }
+
+            if (!aimJoystick.element || !aimJoystick.knob) {
+                console.error("Aim joystick elements not found!");
+                return;
+            }
+
             initMoveJoystick(moveJoystick);
             initAimJoystick(aimJoystick, player);
 
@@ -352,6 +391,11 @@
             const element = joystick.element;
             const knob = joystick.knob;
             
+            if (!element || !knob) {
+                console.error("Joystick elements not found!");
+                return;
+            }
+            
             element.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 if (joystick.touchId === null) {
@@ -400,6 +444,11 @@
             const element = joystick.element;
             const knob = joystick.knob;
             
+            if (!element || !knob) {
+                console.error("Joystick elements not found!");
+                return;
+            }
+            
             element.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 if (joystick.touchId === null) {
@@ -446,11 +495,18 @@
         }
 
         // ===== ПОДКЛЮЧЕНИЕ К КОМНАТЕ =====
-        document.getElementById("connectBtn").addEventListener("click", () => {
-            const roomId = document.getElementById("roomInput").value.trim();
-            if (roomId) {
-                window.location.hash = roomId;
-                initP2P(roomId);
+        document.addEventListener('DOMContentLoaded', () => {
+            const connectBtn = document.getElementById("connectBtn");
+            if (connectBtn) {
+                connectBtn.addEventListener("click", () => {
+                    const roomId = document.getElementById("roomInput").value.trim();
+                    if (roomId) {
+                        window.location.hash = roomId;
+                        initP2P(roomId);
+                    }
+                });
+            } else {
+                console.error("Connect button not found!");
             }
         });
 
