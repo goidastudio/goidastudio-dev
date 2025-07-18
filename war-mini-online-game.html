@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>war-mini-online-game: P2P Battle</title>
+    <script src="https://goidastudio.github.io/goidastudio-dev/gse-lib-0.1.js"></script>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; touch-action: none; background: #222; }
+        canvas { display: block; width: 100%; height: 100%; }
+        #moveJoystick {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 100px;
+            height: 100px;
+            background: rgba(0, 255, 0, 0.2);
+            border-radius: 50%;
+            touch-action: none;
+        }
+        #aimJoystick {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 0, 0, 0.2);
+            border-radius: 50%;
+            touch-action: none;
+        }
+        #fireButton {
+            position: absolute;
+            bottom: 140px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 0, 0, 0.5);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+            z-index: 100;
+        }
+        #roomLink {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 5px;
+            border-radius: 5px;
+            font-family: Arial;
+        }
+        #roomConnect {
+            position: absolute;
+            top: 50px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px;
+            border-radius: 5px;
+            font-family: Arial;
+        }
+        .joystickKnob {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            top: 30px;
+            left: 30px;
+            transition: transform 0.1s;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="moveJoystick"><div class="joystickKnob" id="moveKnob"></div></div>
+    <div id="aimJoystick"><div class="joystickKnob" id="aimKnob"></div></div>
+    <div id="fireButton">FIRE</div>
+    <div id="roomLink">Room: ...</div>
+    <div id="roomConnect">
+        <input type="text" id="roomInput" placeholder="Room ID">
+        <button id="connectBtn">Connect</button>
+    </div>
+
+    <script>
+        // ===== НАСТРОЙКИ ИГРЫ =====
+        const PLAYER_SPEED = 3;
+        const BULLET_SPEED = 10;
+        const PLAYER_SIZE = 40;
+        const BULLET_SIZE = 10;
+        const JOYSTICK_RADIUS = 40;
+        const PLAYER_HEALTH = 100;
+        const BULLET_DAMAGE = 34;
+
+        // ===== ИНИЦИАЛИЗАЦИЯ ДВИЖКА =====
+        const engine = new GSEngine("gameCanvas", {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            physicsEnabled: true,
+            layers: ["ground", "players", "bullets"],
+            collisionMatrix: {
+                players: ["bullets"]
+            }
+        }, "Mobile Warzone", "Goida Studio");
+
+        // ===== СПРАЙТЫ =====
+        const SPRITES = {
+            player: "soldatik.png",
+            bullet: "patron.png",
+            grass: "travka.png"
+        };
+
+        // ===== P2P-СЕТИ =====
+        let peer;
+        let connections = [];
+        let isHost = false;
+        let players = {};
+        let localPlayerId = null;
+
+        // ===== УПРАВЛЕНИЕ =====
+        const moveJoystick = {
+            x: 0, y: 0, active: false, touchId: null,
+            element: document.getElementById("moveJoystick"),
+            knob: document.getElementById("moveKnob")
+        };
+        
+        const aimJoystick = {
+            x: 0, y: 0, active: false, touchId: null,
+            element: document.getElementById("aimJoystick"),
+            knob: document.getElementById("aimKnob"),
+            lastPosition: { x: 0, y: 0 }
+        };
+
+        // Инициализация P2P
+        function initP2P(roomId = null) {
+            if (!roomId) {
+                roomId = Math.random().toString(36).substring(2, 8);
+                isHost = true;
+                window.location.hash = roomId;
+            }
+
+            document.getElementById("roomLink").textContent = `Room: ${roomId}`;
+            peer = new Peer();
+            
+            peer.on('open', (id) => {
+                localPlayerId = id;
+                spawnPlayer(id, true);
+                
+                if (isHost) {
+                    peer.on('connection', (conn) => {
+                        conn.on('data', handleData);
+                        connections.push(conn);
+                        conn.send({ 
+                            type: "init", 
+                            players: Object.keys(players).map(k => ({
+                                id: k,
+                                x: players[k].x,
+                                y: players[k].y,
+                                rotation: players[k].rotation
+                            }))
+                        });
+                    });
+                } else {
+                    const hostConn = peer.connect(roomId);
+                    hostConn.on('open', () => {
+                        hostConn.send({ type: "join", id });
+                    });
+                    hostConn.on('data', handleData);
+                    connections.push(hostConn);
+                }
+            });
+        }
+
+        // Обработка входящих данных
+        function handleData(data) {
+            switch (data.type) {
+                case "init":
+                    data.players.forEach(p => {
+                        if (!players[p.id]) spawnPlayer(p.id, false);
+                    });
+                    break;
+                case "join":
+                    if (isHost) {
+                        spawnPlayer(data.id, false);
+                        broadcast({ type: "playerJoin", id: data.id });
+                    }
+                    break;
+                case "playerUpdate":
+                    if (players[data.id] && !players[data.id].isLocal) {
+                        players[data.id].gameObject.transform.position.x = data.x;
+                        players[data.id].gameObject.transform.position.y = data.y;
+                        players[data.id].gameObject.transform.rotation = data.rotation;
+                    }
+                    break;
+                case "shoot":
+                    spawnBullet(data.x, data.y, data.angle, data.playerId);
+                    break;
+                case "playerHit":
+                    if (players[data.playerId]) {
+                        players[data.playerId].health -= data.damage;
+                        if (players[data.playerId].health <= 0 && isHost) {
+                            broadcast({ type: "playerDeath", playerId: data.playerId });
+                        }
+                    }
+                    break;
+                case "playerDeath":
+                    if (players[data.playerId]) {
+                        engine.destroy(players[data.playerId].gameObject);
+                        delete players[data.playerId];
+                        
+                        if (data.playerId !== localPlayerId && isHost) {
+                            setTimeout(() => {
+                                spawnPlayer(data.playerId, false);
+                            }, 3000);
+                        }
+                    }
+                    break;
+            }
+        }
+
+        // Отправка данных всем игрокам
+        function broadcast(data) {
+            connections.forEach(conn => conn.send(data));
+        }
+
+        // ===== ИГРОВЫЕ ОБЪЕКТЫ =====
+        function spawnPlayer(id, isLocal) {
+            const player = engine.createGameObject(`Player_${id}`, [SpriteRenderer, BoxCollider2D], "players");
+            player.transform.position.x = Math.random() * (engine.canvas.width - PLAYER_SIZE);
+            player.transform.position.y = Math.random() * (engine.canvas.height - PLAYER_SIZE);
+            player.getComponent(SpriteRenderer).loadImage(SPRITES.player);
+            player.getComponent(SpriteRenderer).width = PLAYER_SIZE;
+            player.getComponent(SpriteRenderer).height = PLAYER_SIZE;
+            
+            const collider = player.getComponent(BoxCollider2D);
+            collider.width = PLAYER_SIZE;
+            collider.height = PLAYER_SIZE;
+            collider.onCollision = (other) => {
+                if (other.gameObject.name.startsWith("Bullet_")) {
+                    const bulletOwner = other.gameObject.name.split('_')[2];
+                    if (bulletOwner !== id) {
+                        broadcast({
+                            type: "playerHit",
+                            playerId: id,
+                            damage: BULLET_DAMAGE
+                        });
+                        engine.destroy(other.gameObject);
+                    }
+                }
+            };
+            
+            players[id] = {
+                gameObject: player,
+                x: player.transform.position.x,
+                y: player.transform.position.y,
+                rotation: 0,
+                health: PLAYER_HEALTH,
+                isLocal
+            };
+
+            if (isLocal) {
+                setupMobileControls(player);
+            }
+
+            return player;
+        }
+
+        function spawnBullet(x, y, angle, playerId) {
+            const bullet = engine.createGameObject(`Bullet_${Date.now()}_${playerId}`, [SpriteRenderer, BoxCollider2D], "bullets");
+            bullet.transform.position.x = x;
+            bullet.transform.position.y = y;
+            bullet.transform.rotation = angle;
+            bullet.getComponent(SpriteRenderer).loadImage(SPRITES.bullet);
+            bullet.getComponent(SpriteRenderer).width = BULLET_SIZE;
+            bullet.getComponent(SpriteRenderer).height = BULLET_SIZE;
+            
+            const collider = bullet.getComponent(BoxCollider2D);
+            collider.width = BULLET_SIZE;
+            collider.height = BULLET_SIZE;
+            collider.isTrigger = true;
+            
+            bullet.update = () => {
+                bullet.transform.position.x += Math.cos(angle) * BULLET_SPEED;
+                bullet.transform.position.y += Math.sin(angle) * BULLET_SPEED;
+                
+                if (bullet.transform.position.x < 0 || bullet.transform.position.x > engine.canvas.width ||
+                    bullet.transform.position.y < 0 || bullet.transform.position.y > engine.canvas.height) {
+                    engine.destroy(bullet);
+                }
+            };
+        }
+
+        // ===== УПРАВЛЕНИЕ НА МОБИЛЬНЫХ =====
+        function setupMobileControls(player) {
+            const fireButton = document.getElementById("fireButton");
+
+            // Инициализация джойстиков
+            initMoveJoystick(moveJoystick);
+            initAimJoystick(aimJoystick, player);
+
+            fireButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                let angle = aimJoystick.x === 0 && aimJoystick.y === 0 
+                    ? player.transform.rotation 
+                    : Math.atan2(aimJoystick.y, aimJoystick.x);
+                
+                spawnBullet(
+                    player.transform.position.x,
+                    player.transform.position.y,
+                    angle,
+                    localPlayerId
+                );
+                
+                broadcast({
+                    type: "shoot",
+                    x: player.transform.position.x,
+                    y: player.transform.position.y,
+                    angle: angle,
+                    playerId: localPlayerId
+                });
+            });
+
+            player.update = () => {
+                if (moveJoystick.active) {
+                    const newX = Math.max(PLAYER_SIZE/2, 
+                        Math.min(engine.canvas.width - PLAYER_SIZE/2, 
+                        player.transform.position.x + moveJoystick.x * 0.1 * PLAYER_SPEED));
+                    const newY = Math.max(PLAYER_SIZE/2, 
+                        Math.min(engine.canvas.height - PLAYER_SIZE/2, 
+                        player.transform.position.y + moveJoystick.y * 0.1 * PLAYER_SPEED));
+                    
+                    player.transform.position.x = newX;
+                    player.transform.position.y = newY;
+                }
+
+                broadcast({
+                    type: "playerUpdate",
+                    id: localPlayerId,
+                    x: player.transform.position.x,
+                    y: player.transform.position.y,
+                    rotation: player.transform.rotation
+                });
+            };
+        }
+
+        function initMoveJoystick(joystick) {
+            const element = joystick.element;
+            const knob = joystick.knob;
+            
+            element.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (joystick.touchId === null) {
+                    joystick.touchId = e.changedTouches[0].identifier;
+                    const rect = element.getBoundingClientRect();
+                    joystick.centerX = rect.left + rect.width / 2;
+                    joystick.centerY = rect.top + rect.height / 2;
+                    joystick.active = true;
+                }
+            });
+
+            document.addEventListener('touchmove', (e) => {
+                if (!joystick.active) return;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === joystick.touchId) {
+                        e.preventDefault();
+                        const touch = e.changedTouches[i];
+                        joystick.x = touch.clientX - joystick.centerX;
+                        joystick.y = touch.clientY - joystick.centerY;
+                        
+                        const distance = Math.sqrt(joystick.x ** 2 + joystick.y ** 2);
+                        if (distance > JOYSTICK_RADIUS) {
+                            joystick.x = (joystick.x / distance) * JOYSTICK_RADIUS;
+                            joystick.y = (joystick.y / distance) * JOYSTICK_RADIUS;
+                        }
+                        
+                        knob.style.transform = `translate(${joystick.x}px, ${joystick.y}px)`;
+                    }
+                }
+            }, { passive: false });
+
+            document.addEventListener('touchend', (e) => {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === joystick.touchId) {
+                        joystick.touchId = null;
+                        joystick.x = 0;
+                        joystick.y = 0;
+                        joystick.active = false;
+                        knob.style.transform = 'translate(0, 0)';
+                    }
+                }
+            });
+        }
+
+        function initAimJoystick(joystick, player) {
+            const element = joystick.element;
+            const knob = joystick.knob;
+            
+            element.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (joystick.touchId === null) {
+                    joystick.touchId = e.changedTouches[0].identifier;
+                    const rect = element.getBoundingClientRect();
+                    joystick.centerX = rect.left + rect.width / 2;
+                    joystick.centerY = rect.top + rect.height / 2;
+                    joystick.active = true;
+                }
+            });
+
+            document.addEventListener('touchmove', (e) => {
+                if (!joystick.active) return;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === joystick.touchId) {
+                        e.preventDefault();
+                        const touch = e.changedTouches[i];
+                        joystick.x = touch.clientX - joystick.centerX;
+                        joystick.y = touch.clientY - joystick.centerY;
+                        
+                        const distance = Math.sqrt(joystick.x ** 2 + joystick.y ** 2);
+                        if (distance > JOYSTICK_RADIUS) {
+                            joystick.x = (joystick.x / distance) * JOYSTICK_RADIUS;
+                            joystick.y = (joystick.y / distance) * JOYSTICK_RADIUS;
+                        }
+                        
+                        joystick.lastPosition.x = joystick.x;
+                        joystick.lastPosition.y = joystick.y;
+                        knob.style.transform = `translate(${joystick.x}px, ${joystick.y}px)`;
+                        
+                        player.transform.rotation = Math.atan2(joystick.y, joystick.x);
+                    }
+                }
+            }, { passive: false });
+
+            document.addEventListener('touchend', (e) => {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === joystick.touchId) {
+                        joystick.touchId = null;
+                        joystick.active = false;
+                    }
+                }
+            });
+        }
+
+        // ===== ПОДКЛЮЧЕНИЕ К КОМНАТЕ =====
+        document.getElementById("connectBtn").addEventListener("click", () => {
+            const roomId = document.getElementById("roomInput").value.trim();
+            if (roomId) {
+                window.location.hash = roomId;
+                initP2P(roomId);
+            }
+        });
+
+        // ===== ЗАПУСК ИГРЫ =====
+        window.onload = () => {
+            // Автоматически создаем комнату при загрузке
+            if (!window.location.hash) {
+                initP2P();
+            } else {
+                // Подключаемся к существующей комнате
+                initP2P(window.location.hash.substring(1));
+            }
+            
+            // Создание фона
+            const background = engine.createGameObject("Background", [SpriteRenderer], "ground");
+            background.getComponent(SpriteRenderer).loadImage(SPRITES.grass);
+            background.getComponent(SpriteRenderer).width = engine.canvas.width;
+            background.getComponent(SpriteRenderer).height = engine.canvas.height;
+            background.transform.position.x = engine.canvas.width / 2;
+            background.transform.position.y = engine.canvas.height / 2;
+        };
+    </script>
+</body>
+</html>
