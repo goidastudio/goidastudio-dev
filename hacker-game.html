@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Игра про взлом узлов, сетей, серверов.">
+    <meta name="keywords" content="взлом, хаккинг, игра">
+    <!-- OG -->
+        <meta property="og:title" content="HACKER TERMINAL GAME">
+        <meta property="og:description" content="Игра про взлом узлов, сетей, серверов.">
+        <meta property="og:url" content="https://goidastudio.github.io/goidastudio-dev/hacker-game.html">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HACKER TERMINAL GAME</title>
+    <style>
+        :root {
+            --hacker-green: #00ff00;
+            --matrix-green: #20c20e;
+            --dark-bg: #0a0a0a;
+            --terminal-bg: #111111;
+            --alert-red: #ff0033;
+            --warning-yellow: #ffff00;
+            --info-blue: #00aaff;
+        }
+        
+        body {
+            background-color: var(--dark-bg);
+            color: var(--hacker-green);
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+        
+        #header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed var(--hacker-green);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        #terminal-container {
+            display: flex;
+            height: 70vh;
+        }
+        
+        #network-map {
+            width: 250px;
+            border-right: 1px solid var(--hacker-green);
+            padding-right: 10px;
+            overflow-y: auto;
+        }
+        
+        #terminal {
+            flex-grow: 1;
+            background-color: var(--terminal-bg);
+            height: 100%;
+            overflow-y: auto;
+            padding: 15px;
+            border: 1px solid var(--hacker-green);
+            margin-left: 10px;
+        }
+        
+        #input-container {
+            display: flex;
+            margin-top: 10px;
+            align-items: center;
+        }
+        
+        #prompt {
+            margin-right: 10px;
+            color: var(--matrix-green);
+        }
+        
+        #command-input {
+            background-color: transparent;
+            color: var(--hacker-green);
+            border: 1px solid var(--hacker-green);
+            flex-grow: 1;
+            font-family: 'Courier New', monospace;
+            padding: 8px;
+            font-size: 16px;
+        }
+        
+        #command-input:focus {
+            outline: none;
+            border-color: var(--matrix-green);
+        }
+        
+        .node {
+            margin-bottom: 5px;
+            padding: 3px;
+            cursor: pointer;
+        }
+        
+        .node:hover {
+            background-color: #1a1a1a;
+        }
+        
+        .hacked {
+            color: var(--matrix-green);
+            font-weight: bold;
+        }
+        
+        
+        .success {
+            color: var(--matrix-green);
+        }
+        
+        .error {
+            color: var(--alert-red);
+        }
+        
+        .warning {
+            color: var(--warning-yellow);
+        }
+        
+        .info {
+            color: var(--info-blue);
+        }
+        
+        .system {
+            color: #ff00ff;
+        }
+        
+        .blink {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        #status-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+        
+        .progress-bar {
+            height: 5px;
+            background-color: #333;
+            margin-top: 3px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: var(--hacker-green);
+            width: 0%;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>▲ HACKER TERMINAL GAME ▼</h1>
+        <div id="player-info">
+            <div>Уровень: <span id="player-level">1</span></div>
+            <div>Деньги: $<span id="money">100</span></div>
+            <div>Репутация: <span id="reputation">0</span></div>
+        </div>
+    </div>
+    
+    <div id="terminal-container">
+        <div id="network-map">
+            <h3>▲ СЕТЕВАЯ КАРТА ▼</h3>
+            <div id="nodes"></div>
+            
+            
+            
+            <h3>▲ ИНСТРУМЕНТЫ ▼</h3>
+            <div id="tools"></div>
+        </div>
+        
+        <div id="terminal"></div>
+    </div>
+    
+    <div id="input-container">
+        <span id="prompt">user@hacker:~$</span>
+        <br>
+        <input type="text" id="command-input" autofocus>
+    </div>
+    
+    <div id="status-bar">
+        <div>
+            Обнаружение: 
+            <span id="detection-level">0</span>%
+            <div class="progress-bar">
+                <div id="detection-progress" class="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+        <div id="cooldowns"></div>
+    </div>
+
+    <script>
+        // Игровые константы
+        const BASE_DETECTION_CHANCE = 0.24;
+        const REPUTATION_LEVELS = [0, 100, 200, 300, 500, 1000, 5000, 10000, 100000, 1000000];
+        const TOOL_PRICES = {
+            'nmap': 0,
+            'hydra': 300,
+            'metasploit': 800,
+            'wireshark': 450,
+            'vpn': 200,
+            'ai_firewall': 600,
+            'zero_day': 1200,
+            'ddos': 10000,
+            'rat': 6000,
+            'locker': 5000
+        };
+        
+        // Игровое состояние
+        let state = {
+            level: 1,
+            money: 100,
+            reputation: 0,
+            tools: ['nmap'],
+            knownNodes: [],
+            hackedNodes: [],
+            currentTarget: null,
+            isConnected: false,
+            detectionLevel: 0,
+            activeCooldowns: {}, 
+            tasks: [],
+            lastActivityTime: Date.now()
+        };
+
+        // DOM элементы
+        const terminal = document.getElementById('terminal');
+        const commandInput = document.getElementById('command-input');
+        const prompt = document.getElementById('prompt');
+        const nodesContainer = document.getElementById('nodes');
+        const toolsContainer = document.getElementById('tools');
+        const detectionLevelElement = document.getElementById('detection-level');
+        const detectionProgressElement = document.getElementById('detection-progress');
+        const cooldownsContainer = document.getElementById('cooldowns');
+        const moneyElement = document.getElementById('money');
+        const reputationElement = document.getElementById('reputation');
+        const playerLevelElement = document.getElementById('player-level');
+        
+        // Инициализация игры
+        function init() {
+            generateNetwork();
+            updateUI();
+            setInterval(save, 60000)
+            printWelcomeMessage();
+            processCommand('load');
+            // Обработчик команд
+            commandInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    processCommand(commandInput.value.trim());
+                    commandInput.value = '';
+                }
+            });
+            
+            // Игровой цикл
+            setInterval(gameLoop, 1000);
+        }
+        
+        function gameLoop() {
+            // Уменьшение уровня обнаружения со временем
+            if (state.detectionLevel > 0 && !isBeingTraced()) {
+                state.detectionLevel = Math.max(0, state.detectionLevel - 1);
+                updateDetectionUI();
+            }
+            state.money = Math.floor(state.money);
+            
+            // Обновление кулдаунов
+            updateCooldowns();
+            if(state.reputation > 1000000){
+                //win
+            }
+            // Случайные события
+            if (Math.random() < 0.005 * (state.reputation / 1000)) {
+                randomEvent();
+            }
+        }
+        function randomEvent(){
+        if(!state.tasks){
+            state.tasks = [];
+        }
+            let e = [
+                'hack bank', 
+                'hack company', 
+                'hack home', 
+                'hack president'
+            ];
+            let re = Math.floor(Math.random() * e.length);
+            if(e[re].toString() === "undefended"){}
+            else{
+            state.tasks.push(e[re]);
+            printToTerminal("Новый заказ: " + e[re], "warning");
+            }
+        }
+        function printWelcomeMessage() {
+            printToTerminal("Добро пожаловать в HACKER TERMINAL", "system");
+            printToTerminal("Загружены базовые инструменты: nmap", "info");
+            printToTerminal("Введите 'help' для списка команд", "info");
+            printToTerminal("----------------------------------------", "system");
+        }
+        
+        function generateNetwork() {
+            const nodeTypes = [
+                {type: "Домашний роутер", security: 1, value: 50},
+                {type: "Корпоративный сервер", security: 3, value: 200},
+                {type: "Правительственный сайт", security: 5, value: 500},
+                {type: "Банковская система", security: 4, value: 800}
+            ];
+            
+            state.knownNodes = [];
+            
+            for (let i = 0; i < 10; i++) {
+                const nodeType = nodeTypes[Math.floor(Math.random() * nodeTypes.length)];
+                const ip = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+                let node1 = {
+                    ip: ip,
+                    type: nodeType.type,
+                    security: nodeType.security,
+                    value: nodeType.value,
+                    hacked: false,
+                    ports: generatePorts(nodeType.security), 
+                    files: [
+                        "passwords.txt", 
+                        "database.db", 
+                        "accounts.db"
+                    ]
+                };
+                if(node1.type == "Банковская система"){
+                    node1.files.push("credit_cards.db");
+                }
+                else if(node1.type == "Правительственный сайт"){
+                    node1.files.push("passports.db");
+                }
+                state.knownNodes.push(node1);
+            }
+            
+            renderNetworkMap();
+        }
+        
+        function generatePorts(security) {
+            const ports = [];
+            const commonPorts = [21, 22, 80, 443, 3306];
+            
+            // Базовые порты
+            for (const port of commonPorts) {
+                if (Math.random() > 0.3) {
+                    ports.push({
+                        number: port,
+                        service: getServiceByPort(port),
+                        vulnerable: Math.random() > 0.5
+                    });
+                }
+            }
+            
+            // Дополнительные уязвимые порты для слабых систем
+            if (security < 3) {
+                ports.push({
+                    number: Math.floor(Math.random() * 2000) + 8000,
+                    service: "unknown",
+                    vulnerable: true
+                });
+            }
+            
+            return ports;
+        }
+        
+        function getServiceByPort(port) {
+            const services = {
+                21: "FTP",
+                22: "SSH",
+                80: "HTTP",
+                443: "HTTPS",
+                3306: "MySQL"
+            };
+            
+            return services[port] || "Unknown";
+        }
+        
+        function renderNetworkMap() {
+            nodesContainer.innerHTML = '';
+            
+            state.knownNodes.forEach(node => {
+                const nodeElement = document.createElement('div');
+                nodeElement.className = `node ${node.hacked ? 'hacked' : ''}`;
+                nodeElement.textContent = `${node.ip} - ${node.type}`;
+                nodeElement.addEventListener('click', () => {
+                    commandInput.value = `scan ${node.ip}`;
+                    commandInput.focus();
+                });
+                nodesContainer.appendChild(nodeElement);
+            });
+        }
+        
+        
+        
+        function renderTools() {
+            toolsContainer.innerHTML = '';
+            
+            for (const [tool, price] of Object.entries(TOOL_PRICES)) {
+                const owned = state.tools.includes(tool);
+                const toolElement = document.createElement('div');
+                toolElement.className = `tool ${owned ? 'owned' : ''}`;
+                
+                toolElement.innerHTML = `
+                    <strong>${tool.toUpperCase()}</strong>
+                    <div>Цена: $${price} ${owned ? '(куплено)' : ''}</div>
+                `;
+                
+                if (!owned) {
+                    toolElement.addEventListener('click', () => {
+                        commandInput.value = `buy ${tool}`;
+                        commandInput.focus();
+                    });
+                }
+                
+                toolsContainer.appendChild(toolElement);
+            }
+        }
+        
+        function updateUI() {
+            moneyElement.textContent = state.money;
+            reputationElement.textContent = state.reputation;
+            
+            playerLevelElement.textContent = state.level;
+            // Проверка уровня игрока
+            const newLevel = REPUTATION_LEVELS.findIndex(threshold => state.reputation < threshold);
+            if (newLevel !== state.level) {
+                state.level = newLevel;
+                playerLevelElement.textContent = state.level;
+                if (newLevel > state.level) {
+                    printToTerminal(`▲ ДОСТИЖЕНИЕ: Вы достигли уровня ${state.level}!`, "success");
+                }
+            }
+            
+            renderNetworkMap();
+            
+            renderTools();
+        }
+        
+        function updateDetectionUI() {
+            detectionLevelElement.textContent = state.detectionLevel;
+            detectionProgressElement.style.width = `${state.detectionLevel}%`;
+            
+            if (state.detectionLevel > 70) {
+                detectionLevelElement.className = 'error blink';
+            } else if (state.detectionLevel > 30) {
+                detectionLevelElement.className = 'warning';
+            } else {
+                detectionLevelElement.className = '';
+            }
+        }
+        
+        function updateCooldowns() {
+            cooldownsContainer.innerHTML = '';
+            
+            for (const [action, endTime] of Object.entries(state.activeCooldowns)) {
+                const remaining = Math.ceil((endTime - Date.now()) / 1000);
+                if (remaining > 0) {
+                    const cooldownElement = document.createElement('div');
+                    cooldownElement.textContent = `${action}: ${remaining}s`;
+                    cooldownsContainer.appendChild(cooldownElement);
+                } else {
+                    delete state.activeCooldowns[action];
+                }
+            }
+        }
+        
+        function addCooldown(action, seconds) {
+            state.activeCooldowns[action] = Date.now() + seconds * 1000;
+        }
+        
+        function isOnCooldown(action) {
+            return state.activeCooldowns[action] && state.activeCooldowns[action] > Date.now();
+        }
+        
+        function printToTerminal(text, type = '') {
+            const line = document.createElement('div');
+            if (type) line.className = type;
+            line.textContent = text;
+            terminal.appendChild(line);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+        
+        function processCommand(command) {
+            if (!command) return;
+            
+            // Запись команды в терминал
+            printToTerminal(`${prompt.textContent} ${command}`, 'command');
+            
+            const parts = command.split(' ');
+            const cmd = parts[0].toLowerCase();
+            const args = parts.slice(1);
+            
+            switch(cmd) {
+                case 'help':
+                    showHelp();
+                    break;
+                case 'clear':
+                    terminal.innerHTML = '';
+                    break;
+                case 'scan':
+                    scanNode(args[0]);
+                    break;
+                case 'connect':
+                    connectToNode(args[0]);
+                    break;
+                case 'disconnect':
+                    disconnect();
+                    break;
+                case 'bruteforce':
+                    bruteForce();
+                    break;
+                case 'download':
+                    downloadFile(args[0]);
+                    break;
+                case 'tasks':
+                    state.tasks.forEach(task =>{
+                        printToTerminal(task, "info");
+                    });
+                    break;
+                case 'decrypt':
+                    decryptFile(args[0]);
+                    break;
+                case 'buy':
+                    buyTool(args[0]);
+                    break;
+                
+                case 'status':
+                    showStatus();
+                    break;
+                case 'use':
+                    useTool(args[0]);
+                    break;
+                case 'ip':
+                    showKnownIPs();
+                    break;
+                case 'save':
+                    save();
+                    printToTerminal("Сохранено");
+                    break;
+                case 'load':
+                    load();
+                    break;
+                case 'reloadnet':
+                    generateNetwork();
+                    printToTerminal("сеть обновлена.");
+                    break;
+                case 'ddos':
+                    if(state.tools.includes('ddos') && !isOnCooldown('ddos')){
+                        state.knownNodes.find(node => node.ip === args[0]).security = 1;
+                        state.reputation += 50;
+                        setTimeout(function(){
+                            const nodeTypes = [
+                {type: "Домашний роутер", security: 1, value: 50},
+                {type: "Корпоративный сервер", security: 3, value: 200},
+                {type: "Правительственный сайт", security: 5, value: 500},
+                {type: "Банковская система", security: 4, value: 800}
+            ];
+                            let node1 = state.knownNodes.find(node => node.ip === args[0]);
+                            node1.security = nodeTypes.find(nt => nt.type === node1.type).security;
+                        }, 60000);
+                        printToTerminal("ddos атака на 60с, ослабила уровень защиты до 1.");
+                        addCooldown('ddos', 120);
+                    }
+                    break;
+                case 'rat':
+                    if(state.tools.includes('rat') && !isOnCooldown('rat') && state.knownNodes.find(node => node.ip === args[0])){
+                        var val = state.knownNodes.find(node => node.ip === args[0]).value;
+                        printToTerminal("RAT работает.");
+                        setTimeout(function() {
+                            state.money += Math.floor(val / 3);
+                            printToTerminal(`Украли данных на ${Math.floor(val / 3)}`);
+                            updateUI();
+                        }, 10000);
+                        setTimeout(function() {
+                            state.money += Math.floor(val / 3);
+                            printToTerminal(`Украли данных на ${Math.floor(val / 3)}`);
+                            updateUI();
+                        }, 20000);
+                        setTimeout(function() {
+                            state.money += Math.floor(val / 3);
+                            printToTerminal(`Украли данных на ${Math.floor(val / 3)}`);
+                            updateUI();
+                        }, 30000);
+                        addCooldown('rat', 120);
+                    }
+                    break;
+                case 'locker':
+                    if(state.tools.includes('locker') && !isOnCooldown('locker')){
+                        state.money += state.knownNodes.find(node => node.ip === args[0]).value;
+                        var mch = state.knownNodes.find(node => node.ip === args[0]).value;
+                        printToTerminal(`Получено: ${mch}`);
+                        addCooldown('locker', 120);
+                    }
+                    break;
+                case 'reset':
+                    terminal.innerHTML = "";
+                    state = {
+            level: 1,
+            money: 100,
+            reputation: 0,
+            tools: ['nmap'],
+            knownNodes: [],
+            hackedNodes: [],
+            currentTarget: null,
+            isConnected: false,
+            detectionLevel: 0,
+            activeCooldowns: {}, 
+            tasks: [],
+            lastActivityTime: Date.now()
+        };
+                    save();
+                    printToTerminal("Новая игра...");
+                    break;
+                default:
+                    printToTerminal(`Ошибка: неизвестная команда '${cmd}'`, "error");
+            }
+        }
+        
+        function showHelp() {
+            printToTerminal("Доступные команды:", "info");
+            printToTerminal("help - показать это сообщение");
+            printToTerminal("clear - очистить терминал");
+            printToTerminal("scan <IP> - сканировать узел");
+            printToTerminal("connect <IP> - подключиться к узлу");
+            printToTerminal("disconnect - отключиться");
+            printToTerminal("bruteforce - атака перебором");
+            printToTerminal("download <файл> - скачать файл");
+            printToTerminal("decrypt <файл> - расшифровать файл");
+            printToTerminal("buy <инструмент> - купить инструмент");
+            printToTerminal("status - показать статус");
+            printToTerminal("use <инструмент> - использовать инструмент(некоторые используются отдельной командой)");
+            printToTerminal("ip - показать известные IP");
+            printToTerminal("save - сохранить игру.");
+            printToTerminal("load - загрузить игру.");
+            printToTerminal("reset - удалить прогресс.");
+            printToTerminal("reloadnet - перезагрузить сеть, получить новые сети.");
+            printToTerminal("locker - заблокировать узел и требовать откуп");
+            printToTerminal("ddos - ddos атака на узел(занимает защиту и делает его не защищённым)");
+            printToTerminal("rat - запустить rat вирус на узел(он крадёт и продаёт данные)");
+        }
+        
+        function scanNode(ip) {
+            if (!ip) {
+                printToTerminal("Использование: scan <IP>", "error");
+                return;
+            }
+            
+            const node = state.knownNodes.find(n => n.ip === ip);
+            if (!node) {
+                printToTerminal(`Узел ${ip} не найден`, "error");
+                return;
+            }
+            
+            if (isOnCooldown('scan')) {
+                printToTerminal("Сканирование на перезарядке", "error");
+                return;
+            }
+            
+            addCooldown('scan', 5);
+            
+            printToTerminal(`Начато сканирование ${ip}...`, "info");
+            
+            // Анимация сканирования
+            let dots = 0;
+            const scanInterval = setInterval(() => {
+                dots = (dots + 1) % 4;
+                const lastLine = terminal.lastChild;
+                lastLine.textContent = `Сканирование ${ip}${'.'.repeat(dots)}`;
+            }, 300);
+            
+            setTimeout(() => {
+                clearInterval(scanInterval);
+                
+                // Проверка обнаружения (с уменьшенным шансом)
+                const detectionChance = BASE_DETECTION_CHANCE * 
+                    (1 - (state.tools.includes('stealth_scanner') ? 0.3 : 0));
+                
+                if (Math.random() < detectionChance) {
+                    increaseDetection(10 + Math.floor(Math.random() * 20));
+                }
+                
+                // Результаты сканирования
+                printToTerminal(`Результаты сканирования ${ip}:`, "info");
+                printToTerminal(`Тип: ${node.type}`);
+                printToTerminal(`Уровень защиты: ${'/'.repeat(node.security)}`);
+                
+                printToTerminal("Открытые порты:", "info");
+                node.ports.forEach(port => {
+                    printToTerminal(
+                        `${port.number} (${port.service}) ${port.vulnerable ? '- УЯЗВИМЫЙ' : ''}`,
+                        port.vulnerable ? "warning" : ""
+                    );
+                });
+                
+                // Обновление миссии
+                
+                
+            }, 2000 + Math.random() * 3000);
+        }
+        
+        function connectToNode(ip) {
+            if (!ip) {
+                printToTerminal("Использование: connect <IP>", "error");
+                return;
+            }
+            
+            if (state.isConnected) {
+                printToTerminal("Сначала отключитесь от текущего узла", "error");
+                return;
+            }
+            
+            const node = state.knownNodes.find(n => n.ip === ip);
+            if (!node) {
+                printToTerminal(`Узел ${ip} не найден`, "error");
+                return;
+            }
+            
+            printToTerminal(`Попытка подключения к ${ip}...`, "info");
+            
+            setTimeout(() => {
+                // Упрощенное подключение для взломанных узлов
+                if (node.hacked) {
+                    state.currentTarget = node;
+                    state.isConnected = true;
+                    prompt.textContent = `root@${node.ip}:#`;
+                    printToTerminal(`Успешное подключение к ${ip}`, "success");
+                    return;
+                }
+                
+                // Шанс успешного подключения зависит от защиты
+                const successChance = 0.6 - (node.security * 0.1) + 
+                    (state.tools.includes('metasploit') ? 0.2 : 0);
+                
+                if (Math.random() < successChance) {
+                    state.currentTarget = node;
+                    state.isConnected = true;
+                    prompt.textContent = `user@${node.ip}:$`;
+                    printToTerminal(`Успешное подключение к ${ip}`, "success");
+                    
+                    // Шанс обнаружения при подключении
+                    if (Math.random() < BASE_DETECTION_CHANCE * 0.8) {
+                        increaseDetection(5 + Math.floor(Math.random() * 10));
+                    }
+                } else {
+                    printToTerminal("Ошибка подключения: доступ запрещен", "error");
+                    
+                    // Больший шанс обнаружения при неудаче
+                    if (Math.random() < BASE_DETECTION_CHANCE * 1.5) {
+                        increaseDetection(15 + Math.floor(Math.random() * 20));
+                    }
+                }
+            }, 1000 + Math.random() * 2000);
+        }
+        
+        function disconnect() {
+            if (!state.isConnected) {
+                printToTerminal("Вы не подключены к узлу", "error");
+                return;
+            }
+            
+            printToTerminal("Отключение...", "info");
+            state.isConnected = false;
+            state.currentTarget = null;
+            prompt.textContent = "user@hacker:~$";
+            downloaded = [];
+            decrypted = [];
+            printToTerminal("Отключение выполнено", "success");
+        }
+        
+        function bruteForce() {
+            if (!state.isConnected) {
+                printToTerminal("Подключитесь к узлу сначала", "error");
+                return;
+            }
+            
+            if (isOnCooldown('bruteforce')) {
+                printToTerminal("Перебор на перезарядке", "error");
+                return;
+            }
+            
+            addCooldown('bruteforce', 10);
+            
+            const node = state.currentTarget;
+            printToTerminal(`Начата атака перебором на ${node.ip}...`, "warning");
+            
+            // Шанс успеха зависит от защиты и инструментов
+            let successChance = 0.3 - (node.security * 0.05);
+            if (state.tools.includes('hydra')) successChance += 0.25;
+            if (state.tools.includes('zero_day')) successChance += 0.4;
+            
+            // Анимация перебора
+            let attempts = 0;
+            const maxAttempts = 8;
+            const bruteInterval = setInterval(() => {
+                attempts++;
+                printToTerminal(`Попытка ${attempts}/${maxAttempts}...`, "info");
+                
+                if (attempts >= maxAttempts || Math.random() < successChance) {
+                    clearInterval(bruteInterval);
+                    
+                    if (Math.random() < successChance) {
+                        if(state.tasks.includes('hack home') || state.tasks.includes('hack bank') || state.tasks.includes('hack president') || state.tasks.includes('hack company')){
+                            let types =[
+                "Домашний роутер", 
+                "Корпоративный сервер",
+                "Правительственный сайт",
+                "Банковская система",
+                           ];
+                            let types2 = [
+                                "hack home", 
+                                "hack company", 
+                                "hack president",
+                                "hack bank"
+                            ];
+                            state.tasks.forEach(task =>{
+                            if(types.indexOf(node.type)  === types2.indexOf(task)){
+                                state.money += 500;
+                                state.reputation += 50;
+                                printToTerminal("Выполнено: " + task + "получено $500 и 50 реп.", "system");
+                                state.tasks.splice(state.tasks.indexOf(task), 1);
+                            }
+                            });
+                        }
+                        printToTerminal("Успех! Доступ получен", "success");
+                        node.hacked = true;
+                        state.hackedNodes.push(node.ip);
+                        state.money += node.value;
+                        state.reputation += 20;
+                        prompt.textContent = `root@${node.ip}:#`;
+                        
+                        // Обновление миссий
+                                                // Шанс обнаружения
+                        if (Math.random() < BASE_DETECTION_CHANCE * 2) {
+                            increaseDetection(20 + Math.floor(Math.random() * 30));
+                        }
+                    } else {
+                        printToTerminal("Перебор не удался", "error");
+                        
+                        // Больший шанс обнаружения после неудачи
+                        if (Math.random() < BASE_DETECTION_CHANCE * 3) {
+                            increaseDetection(30 + Math.floor(Math.random() * 40));
+                        }
+                    }
+                    
+                    updateUI();
+                }
+            }, 800);
+        }
+        
+        function save() {
+    try {
+        localStorage.setItem("game", JSON.stringify(state));
+        console.log("Игра сохранена:", state);
+    } catch (e) {
+        console.error("Ошибка сохранения:", e);
+        // Можно добавить вывод ошибки в игровой терминал
+        printToTerminal("Ошибка сохранения: " + e.message, "error");
+    }
+}
+
+function load() {
+    try {
+        const savedData = localStorage.getItem("game");
+        if (savedData) {
+            state = JSON.parse(savedData);
+            console.log("Игра загружена:", state);
+            
+            // Обновляем интерфейс после загрузки
+            updateUI();
+            
+            // Восстанавливаем состояние подключения
+            if (state.isConnected && state.currentTarget) {
+                prompt.textContent = `user@${state.currentTarget.ip}:$`;
+            }
+            
+            return true;
+        }
+    } catch (e) {
+        console.error("Ошибка загрузки:", e);
+        printToTerminal("Ошибка загрузки сохранения", "error");
+    }
+    return false;
+}
+        function downloadFile(filename) {
+            if (!state.isConnected) {
+                printToTerminal("Подключитесь к узлу сначала", "error");
+                return;
+            }
+            
+            if (!state.currentTarget.hacked) {
+                printToTerminal("У вас нет прав для загрузки файлов", "error");
+                return;
+            }
+            
+            printToTerminal(`Загрузка ${filename}...`, "info");
+            
+            setTimeout(() => {
+                if(state.currentTarget.files.includes(filename) && !downloaded.includes(filename)){
+                downloaded.push(filename);
+                const value = Math.floor(state.currentTarget.value * 0.3);
+                state.money += value;
+                printToTerminal(`Файл ${filename} загружен. Получено $${value}`, "success");
+                }
+                else{
+                    printToTerminal("Файл не найден. Или уже скачан.", "error");
+                }
+                updateUI();
+            }, 1500);
+        }
+        
+        let downloaded = [];
+        let decrypted = [];
+        function decryptFile(filename) {
+            if (isOnCooldown('decrypt')) {
+                printToTerminal("Дешифровка на перезарядке", "error");
+                return;
+            }
+            
+            addCooldown('decrypt', 8);
+            
+            printToTerminal(`Дешифровка ${filename}...`, "info");
+            if(state.currentTarget.files.includes(filename) && downloaded.includes(filename) && !decrypted.includes(filename)){
+            setTimeout(() => {
+                const success = Math.random() > 0.4 || state.tools.includes('zero_day');
+                var value = 100 + Math.floor(Math.random() * 200);
+                if(filename == "credit_cards.db" || filename == "passports.db"){
+                    value = value * 2;
+                    if(filename == " passports.db"){
+                        value *= 2;
+                    }
+                }
+                if (success) {
+                    decrypted.push(filename);
+                    state.money += value;
+                    printToTerminal(`Файл ${filename} расшифрован. Получено $${value}`, "success");
+                } else {
+                    printToTerminal("Ошибка дешифровки", "error");
+                }
+                
+                updateUI();
+            }, 2000 + Math.random() * 3000);
+            }
+            else {
+                printToTerminal("Файл не найден, возможно он ещё не установлен, а возможно уже расшифрован", "error");
+            }
+        }
+        
+        function buyTool(tool) {
+            if (!tool) {
+                printToTerminal("Использование: buy <инструмент>", "error");
+                return;
+            }
+            
+            const price = TOOL_PRICES[tool.toLowerCase()];
+            if (price === undefined) {
+                printToTerminal(`Инструмент ${tool} не найден`, "error");
+                return;
+            }
+            
+            if (state.tools.includes(tool.toLowerCase())) {
+                printToTerminal("У вас уже есть этот инструмент", "error");
+                return;
+            }
+            
+            if (state.money < price) {
+                printToTerminal("Недостаточно денег", "error");
+                return;
+            }
+            
+            state.money -= price;
+            state.tools.push(tool.toLowerCase());
+            printToTerminal(`Инструмент ${tool} приобретен!`, "success");
+            updateUI();
+        }
+                
+        function useTool(tool) {
+            if (!tool) {
+                printToTerminal("Использование: use <инструмент>", "error");
+                return;
+            }
+            
+            if (!state.tools.includes(tool.toLowerCase())) {
+                printToTerminal("У вас нет этого инструмента", "error");
+                return;
+            }
+            
+            switch(tool.toLowerCase()) {
+                case 'vpn':
+                    printToTerminal("VPN активирован. Ваш трафик теперь скрыт.", "success");
+                    increaseDetection(-20); // Снижение обнаружения
+                    addCooldown('vpn', 60);
+                    break;
+                case 'ai_firewall':
+                    printToTerminal("AI Firewall включен. Обнаружение затруднено.", "success");
+                    addCooldown('ai_firewall', 90);
+                    break;
+                default:
+                    printToTerminal("Этот инструмент нельзя использовать напрямую", "error");
+            }
+        }
+        
+        function showStatus() {
+            printToTerminal("=== СТАТУС ===", "system");
+            printToTerminal(`Уровень: ${state.level}`);
+            printToTerminal(`Деньги: $${state.money}`);
+            printToTerminal(`Репутация: ${state.reputation}`);
+            printToTerminal(`Взломанные узлы: ${state.hackedNodes.length}`);
+            printToTerminal(`Инструменты: ${state.tools.join(', ')}`);
+            printToTerminal(`Обнаружение: ${state.detectionLevel}%`, 
+                state.detectionLevel > 70 ? "error" : 
+                state.detectionLevel > 30 ? "warning" : "");
+        }
+        
+        function showKnownIPs() {
+            printToTerminal("Известные IP:", "info");
+            state.knownNodes.forEach(node => {
+                printToTerminal(
+                    `${node.ip} - ${node.type} ${node.hacked ? '(взломан)' : ''}`,
+                    node.hacked ? "success" : ""
+                );
+            });
+        }
+        
+        function increaseDetection(amount) {
+            if (state.tools.includes('ai_firewall')) amount *= 0.5;
+            if (state.tools.includes('vpn') && !isOnCooldown('vpn')) amount *= 0.7;
+            
+            state.detectionLevel = Math.min(100, Math.max(0, state.detectionLevel + amount));
+            
+            if (amount > 0) {
+                printToTerminal(
+                    `▲ ВНИМАНИЕ: Обнаружение +${amount}% (теперь ${state.detectionLevel}%)`,
+                    state.detectionLevel > 70 ? "error" : "warning"
+                );
+            }
+            
+            updateDetectionUI();
+            
+            if (state.detectionLevel >= 100) {
+                handleDetection();
+            }
+        }
+        
+        function isBeingTraced() {
+            return state.detectionLevel >= 30;
+        }
+        
+        function handleDetection() {
+            printToTerminal("▲▲▲ КРИТИЧЕСКИЙ УРОВЕНЬ ОБНАРУЖЕНИЯ ▲▲▲", "error blink");
+            printToTerminal("Вас обнаружили! Последствия:", "error");
+            
+            // Потеря денег
+            const moneyLost = Math.floor(state.money * 0.4);
+            state.money -= moneyLost;
+            
+            // Потеря репутации
+            const repLost = Math.floor(state.reputation * 0.2);
+            state.reputation -= repLost;
+            
+            // Потеря подключения
+            if (state.isConnected) {
+                disconnect();
+            }
+            
+            // Сброс обнаружения
+            state.detectionLevel = 0;
+            updateDetectionUI();
+            
+            printToTerminal(`- Потеряно $${moneyLost}`, "error");
+            printToTerminal(`- Потеряно ${repLost} репутации`, "error");
+            printToTerminal("- Все подключения разорваны", "error");
+            
+            // Добавление миссии на восстановление
+            
+            updateUI();
+        }
+        
+        // Запуск игры
+        init();
+    </script>
+</body>
+</html>
